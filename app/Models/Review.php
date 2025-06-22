@@ -1,0 +1,95 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+class Review extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'product_id',
+        'customer_id',
+        'rating',
+        'comment',
+        'status',
+        'reply'
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    // Quan hệ với bảng products
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    // Quan hệ với bảng customers/users
+    public function customer()
+    {
+        return $this->belongsTo(User::class, 'customer_id');
+    }
+
+    // Scope để lọc theo rating
+    public function scopeByRating($query, $rating)
+    {
+        if ($rating) {
+            return $query->where('rating', $rating);
+        }
+        return $query;
+    }
+
+    // Scope để lọc theo sản phẩm
+    public function scopeByProduct($query, $productId)
+    {
+        if ($productId) {
+            return $query->where('product_id', $productId);
+        }
+        return $query;
+    }
+
+    // Scope để lọc theo trạng thái
+    public function scopeByStatus($query, $status)
+    {
+        if ($status !== null) {
+            return $query->where('status', $status);
+        }
+        return $query;
+    }
+
+    // Accessor để hiển thị sao
+    public function getStarsAttribute()
+    {
+        $stars = '';
+        for ($i = 1; $i <= 5; $i++) {
+            $stars .= $i <= $this->rating ? '⭐' : '☆';
+        }
+        return $stars;
+    }
+
+    // Accessor để cắt ngắn comment
+    public function getShortCommentAttribute()
+    {
+        return strlen($this->comment) > 50
+            ? substr($this->comment, 0, 50) . '...'
+            : $this->comment;
+    }
+
+    // Accessor để hiển thị trạng thái
+    public function getStatusTextAttribute()
+    {
+        return $this->status ? 'Hiển thị' : 'Ẩn';
+    }
+
+    public function getStatusBadgeAttribute()
+    {
+        return $this->status
+            ? '<span class="badge bg-success">Hiển thị</span>'
+            : '<span class="badge bg-secondary">Ẩn</span>';
+    }
+}
