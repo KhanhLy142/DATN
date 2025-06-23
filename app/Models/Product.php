@@ -27,6 +27,9 @@ class Product extends Model
         'status' => 'boolean'
     ];
 
+    public function products(){
+        return $this->hasMany(ProductDiscount::class, 'product_id', 'id');
+    }
     /**
      * Quan hệ với Brand
      */
@@ -113,5 +116,13 @@ class Product extends Model
             return asset($this->image);
         }
         return asset('images/no-image.png'); // Ảnh mặc định
+    }
+
+    public function activeDiscounts()
+    {
+        return $this->discounts()
+            ->where('is_active', true)
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now());
     }
 }

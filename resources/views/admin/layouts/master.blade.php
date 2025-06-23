@@ -77,7 +77,7 @@
 
         <!-- Quản lý giảm giá -->
         <div class="sidebar-group hover-toggle">
-            <a href="#" class="has-submenu"><i class="bi bi-percent"></i> Quản lý giảm giá</a>
+            <a href="{{ route('admin.discounts.index') }}" class="has-submenu"><i class="bi bi-percent"></i> Quản lý giảm giá</a>
         </div>
 
         <!-- Quản lý khách hàng -->

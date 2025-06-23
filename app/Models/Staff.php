@@ -3,32 +3,35 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Model;
+// Bỏ Authenticatable vì authentication qua User
 
-class Staff extends Authenticatable
+class Staff extends Model
 {
-    use HasFactory, Notifiable;
+    use HasFactory;
 
     protected $table = 'staffs';
 
     protected $fillable = [
+        'user_id',
         'name',
         'email',
-        'password',
         'phone',
         'role',
+        // Bỏ 'password' vì đã chuyển sang users
     ];
 
-    protected $hidden = [
-        'password',
-        'remember_token',
-    ];
-
+    // Bỏ hidden password và remember_token
     protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
+
+    // Relationship với User
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class);
+    }
 
     // Định nghĩa các role
     public static function getRoles()
@@ -60,7 +63,45 @@ class Staff extends Authenticatable
         return $query->where(function($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
                 ->orWhere('email', 'like', "%{$search}%")
-                ->orWhere('phone', 'like', "%{$search}%");
+                ->orWhere('phone', 'like', "%{$search}%")
+                ->orWhere('role', 'like', "%{$search}%");
         });
+    }
+
+    // Helper methods
+    public function getLoginEmail()
+    {
+        return $this->user->email ?? $this->email;
+    }
+
+    public function canLogin()
+    {
+        return $this->user !== null;
+    }
+
+    // Kiểm tra quyền
+    public function isAdmin()
+    {
+        return $this->role === 'admin';
+    }
+
+    public function canAccessAdmin()
+    {
+        return in_array($this->role, ['admin', 'sales', 'warehouse', 'cskh']);
+    }
+
+    public function canManageProducts()
+    {
+        return in_array($this->role, ['admin', 'warehouse']);
+    }
+
+    public function canManageOrders()
+    {
+        return in_array($this->role, ['admin', 'sales']);
+    }
+
+    public function canManageCustomers()
+    {
+        return in_array($this->role, ['admin', 'cskh']);
     }
 }

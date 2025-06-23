@@ -9,6 +9,34 @@
                 <div class="card">
                     <h4 class="fw-bold text-center text-pink fs-2 mb-4">Thêm mới nhân viên</h4>
                     <div class="card-body">
+
+                        <!-- DEBUG: Hiển thị lỗi validation -->
+                        @if ($errors->any())
+                            <div class="alert alert-danger">
+                                <h6><i class="bi bi-exclamation-triangle"></i> Có lỗi xảy ra:</h6>
+                                <ul class="mb-0">
+                                    @foreach ($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
+                        <!-- DEBUG: Hiển thị lỗi từ session -->
+                        @if (session('error'))
+                            <div class="alert alert-danger">
+                                <h6><i class="bi bi-exclamation-triangle"></i> Lỗi hệ thống:</h6>
+                                {{ session('error') }}
+                            </div>
+                        @endif
+
+                        <!-- DEBUG: Hiển thị thông báo thành công -->
+                        @if (session('success'))
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle"></i> {{ session('success') }}
+                            </div>
+                        @endif
+
                         <form action="{{ route('admin.staffs.store') }}" method="POST">
                             @csrf
 
@@ -59,7 +87,7 @@
                                                class="form-control @error('password') is-invalid @enderror"
                                                id="password"
                                                name="password"
-                                               placeholder="Nhập mật khẩu"
+                                               placeholder="Nhập mật khẩu (tối thiểu 8 ký tự)"
                                                required>
                                         <button class="btn btn-outline-secondary" type="button" id="togglePassword" title="Hiển thị mật khẩu">
                                             <i class="bi bi-eye" id="eyeIcon"></i>
@@ -124,7 +152,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                     <div class="form-text">
-                                        Để trống nếu đây là nhân viên bán hàng (mặc định)
+                                        Chọn vai trò phù hợp cho nhân viên
                                     </div>
                                 </div>
                             </div>
@@ -146,7 +174,7 @@
 
                             <!-- Buttons -->
                             <div class="text-end">
-                                <button class="btn btn-pink" type="submit">Lưu </button>
+                                <button class="btn btn-pink" type="submit">Lưu</button>
                                 <a href="{{ route('admin.staffs.index') }}" class="btn btn-secondary">Hủy</a>
                             </div>
                         </form>
@@ -156,4 +184,3 @@
         </div>
     </div>
 @endsection
-

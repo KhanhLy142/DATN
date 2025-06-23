@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\User\HomeController;
+use App\Http\Controllers\User\ProductController;
 use Illuminate\Support\Facades\Route;
 
 // Import Admin Controllers
@@ -15,6 +18,8 @@ use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\ShippingController as AdminShippingController;
 use App\Http\Controllers\Admin\DiscountController as AdminDiscountController;
 use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
+use App\Http\Controllers\User\AuthController;
+use App\Http\Controllers\User\CategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,9 +28,7 @@ use App\Http\Controllers\Admin\ReviewController as AdminReviewController;
 */
 
 // Trang chủ
-Route::get('/', function () {
-    return view('user.home');
-})->name('home');
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // Trang giới thiệu
 Route::get('/gioi-thieu', function () {
@@ -33,9 +36,7 @@ Route::get('/gioi-thieu', function () {
 })->name('about');
 
 // Danh sách sản phẩm
-Route::get('/san-pham', function () {
-    return view('user.products.index');
-})->name('products.index');
+Route::get('san-pham', [ProductController::class, 'index'])->name('products.index');
 
 // Trang chi tiết sản phẩm
 Route::get('/san-pham/{id}', function ($id) {
@@ -50,35 +51,70 @@ Route::get('/contact', function () {
     return view('user.contact');
 })->name('contact');
 
-// Auth routes cho user
-Route::get('/login', function () {
-    return view('user.auth.login');
-})->name('login');
+// Categories API
+Route::get('/categories', function() {
+    return \App\Models\Category::where('status', true)
+        ->where('parent_id', null)
+        ->with('children.children')
+        ->orderBy('id', 'asc')
+        ->get();
+});
 
-Route::get('/register', function () {
-    return view('user.auth.register');
-})->name('register');
+Route::get('/category/{id}', [CategoryController::class, 'show'])->name('category.show');
 
-Route::get('/account', function () {
-    return view('user.auth.account');
-})->name('account');
+/*
+|--------------------------------------------------------------------------
+| Auth Routes cho User
+|--------------------------------------------------------------------------
+*/
 
-Route::get('/account-edit', function () {
-    return view('user.auth.account-edit');
-})->name('account-edit');
+// Authentication
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Cart và Order routes
-Route::get('/order/cart', function () {
+// Account Management (cần đăng nhập) - CHỈ GIỮ LẠI NHÓM NÀY
+Route::middleware(['auth'])->group(function () {
+    Route::get('/account', [AuthController::class, 'showAccount'])->name('account');
+    Route::get('/account/edit', [AuthController::class, 'editAccount'])->name('account.edit');
+    Route::put('/account/update', [AuthController::class, 'updateAccount'])->name('account.update');
+    Route::get('/change-password', [AuthController::class, 'showChangePassword'])->name('change-password');
+    Route::post('/change-password', [AuthController::class, 'changePassword'])->name('change-password.post');
+
+    // Đơn hàng của tôi
+    Route::get('/orders', function () {
+        return view('user.orders.index');
+    })->name('orders.index');
+
+    Route::get('/orders/{id}', function ($id) {
+        return view('user.orders.detail');
+    })->name('orders.show');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Cart và Order Routes (Guest + Auth)
+|--------------------------------------------------------------------------
+*/
+
+// Cart routes - có thể truy cập mà không cần đăng nhập
+Route::get('/cart', function () {
     return view('user.order.cart');
-})->name('order.cart');
+})->name('cart');
 
-Route::get('/order/checkout', function () {
-    return view('user.order.order-checkout');
-})->name('order.checkout');
+// Checkout - yêu cầu đăng nhập
+Route::middleware(['auth'])->group(function () {
+    Route::get('/checkout', function () {
+        return view('user.order.order-checkout');
+    })->name('checkout');
 
-Route::get('/order/detail/{id}', function ($id) {
-    return view('user.order.order-detail');
-})->name('order.detail');
+    Route::post('/checkout', function () {
+        // Logic xử lý đặt hàng
+        return redirect()->route('orders.index')->with('success', 'Đặt hàng thành công!');
+    })->name('checkout.post');
+});
 
 /*
 |--------------------------------------------------------------------------

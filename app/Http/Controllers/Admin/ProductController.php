@@ -108,7 +108,6 @@ class ProductController extends Controller
                 }
             }
 
-            // ✅ FIX: Sử dụng route admin.products.index thay vì products.index
             return redirect()->route('admin.products.index')
                 ->with('success', 'Thêm sản phẩm "' . $product->name . '" thành công!');
 
@@ -175,12 +174,10 @@ class ProductController extends Controller
                 $this->updateProductVariants($product, $request->variants);
             }
 
-            // ✅ FIX: Sử dụng route admin.products.index thay vì products.index
             return redirect()->route('admin.products.index')
                 ->with('success', 'Sản phẩm "' . $product->name . '" đã được cập nhật thành công!');
 
         } catch (\Exception $e) {
-            \Log::error('Product update error: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }

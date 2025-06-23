@@ -32,6 +32,10 @@ class Discount extends Model
         return $this->belongsToMany(Product::class, 'product_discounts');
     }
 
+    public function discounts(){
+        return $this->hasMany(ProductDiscount::class, 'discount_id', 'id');
+    }
+
     /**
      * Scope để lấy các mã giảm giá đang hoạt động
      */

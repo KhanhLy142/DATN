@@ -4,18 +4,20 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Staff;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class StaffController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Display a listing of the resource - THÊM METHOD NÀY
      */
     public function index(Request $request)
     {
-        $query = Staff::query()->orderBy('created_at', 'desc');
+        $query = Staff::with('user')->orderBy('created_at', 'desc');
 
         // Tìm kiếm
         if ($request->filled('search')) {
@@ -27,11 +29,6 @@ class StaffController extends Controller
             $query->byRole($request->role);
         }
 
-        // Lọc theo trạng thái (có thể mở rộng sau)
-        if ($request->filled('status')) {
-            // Có thể thêm logic lọc theo trạng thái khi có cột is_active
-        }
-
         $staffs = $query->paginate(10);
         $roles = Staff::getRoles();
 
@@ -39,7 +36,7 @@ class StaffController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
+     * Show the form for creating a new resource - THÊM METHOD NÀY
      */
     public function create()
     {
@@ -54,7 +51,7 @@ class StaffController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:staffs',
+            'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
             'role' => 'required|in:admin,sales,warehouse,cskh',
@@ -62,38 +59,63 @@ class StaffController extends Controller
             'name.required' => 'Tên nhân viên là bắt buộc',
             'email.required' => 'Email là bắt buộc',
             'email.email' => 'Email không đúng định dạng',
-            'email.unique' => 'Email đã tồn tại',
+            'email.unique' => 'Email đã tồn tại trong hệ thống',
             'password.required' => 'Mật khẩu là bắt buộc',
             'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự',
             'password.confirmed' => 'Xác nhận mật khẩu không khớp',
             'role.required' => 'Vai trò là bắt buộc',
         ]);
 
-        Staff::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'phone' => $request->phone,
-            'role' => $request->role,
-        ]);
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.staffs.index')
-            ->with('success', 'Thêm nhân viên thành công!');
+            $hashedPassword = Hash::make($request->password);
+
+            // 1. Tạo User với password
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => $hashedPassword, // Lưu password ở users
+            ]);
+
+            // 2. Tạo Staff với cùng password (đồng bộ)
+            Staff::create([
+                'user_id' => $user->id,
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => $hashedPassword, // Lưu password ở staffs (đồng bộ)
+                'phone' => $request->phone,
+                'role' => $request->role,
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('admin.staffs.index')
+                ->with('success', 'Thêm nhân viên thành công!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Có lỗi xảy ra khi tạo nhân viên: ' . $e->getMessage());
+        }
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified resource - THÊM METHOD NÀY
      */
     public function show(Staff $staff)
     {
+        $staff->load('user');
         return view('admin.staffs.show', compact('staff'));
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Show the form for editing the specified resource - THÊM METHOD NÀY
      */
     public function edit(Staff $staff)
     {
+        $staff->load('user');
         $roles = Staff::getRoles();
         return view('admin.staffs.edit', compact('staff', 'roles'));
     }
@@ -110,9 +132,9 @@ class StaffController extends Controller
                 'string',
                 'email',
                 'max:255',
-                Rule::unique('staffs')->ignore($staff->id),
+                Rule::unique('users', 'email')->ignore($staff->user_id),
             ],
-            'password' => 'nullable|string|min:8|confirmed',
+            'password' => 'nullable|string|min:8|confirmed', // Không bắt buộc khi update
             'phone' => 'nullable|string|max:20',
             'role' => 'required|in:admin,sales,warehouse,cskh',
         ], [
@@ -125,42 +147,84 @@ class StaffController extends Controller
             'role.required' => 'Vai trò là bắt buộc',
         ]);
 
-        $data = [
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'role' => $request->role,
-        ];
+        try {
+            DB::beginTransaction();
 
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
+            // Chuẩn bị data để update
+            $userData = [
+                'name' => $request->name,
+                'email' => $request->email,
+            ];
+
+            $staffData = [
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'role' => $request->role,
+            ];
+
+            // Nếu có password mới, hash và cập nhật cả 2 bảng
+            if ($request->filled('password')) {
+                $hashedPassword = Hash::make($request->password);
+                $userData['password'] = $hashedPassword;
+                $staffData['password'] = $hashedPassword; // Đồng bộ password
+            }
+
+            // 1. Cập nhật User
+            $staff->user->update($userData);
+
+            // 2. Cập nhật Staff
+            $staff->update($staffData);
+
+            DB::commit();
+
+            return redirect()->route('admin.staffs.index')
+                ->with('success', 'Cập nhật nhân viên thành công!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Có lỗi xảy ra khi cập nhật nhân viên: ' . $e->getMessage());
         }
-
-        $staff->update($data);
-
-        return redirect()->route('admin.staffs.index')
-            ->with('success', 'Cập nhật nhân viên thành công!');
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified resource from storage - THÊM METHOD NÀY
      */
     public function destroy(Staff $staff)
     {
-        $staff->delete();
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.staffs.index')
-            ->with('success', 'Xóa nhân viên thành công!');
+            $user = $staff->user;
+
+            // Xóa Staff trước
+            $staff->delete();
+
+            // Xóa User sau
+            if ($user) {
+                $user->delete();
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.staffs.index')
+                ->with('success', 'Xóa nhân viên thành công!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->route('admin.staffs.index')
+                ->with('error', 'Có lỗi xảy ra khi xóa nhân viên: ' . $e->getMessage());
+        }
     }
 
     /**
-     * Toggle staff status.
+     * Toggle staff status - THÊM METHOD NÀY
      */
     public function toggleStatus(Staff $staff)
     {
         // Có thể thêm logic để toggle trạng thái hoạt động
-        // Ví dụ: thêm cột 'is_active' vào migration và update logic ở đây
-
         return redirect()->route('admin.staffs.index')
             ->with('success', 'Cập nhật trạng thái thành công!');
     }

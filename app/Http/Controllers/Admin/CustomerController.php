@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-
 
 class CustomerController extends Controller
 {
@@ -16,7 +17,7 @@ class CustomerController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Customer::withCount('orders');
+        $query = Customer::with('user')->withCount('orders');
 
         // Search by name, email, or phone
         if ($request->filled('search')) {
@@ -56,7 +57,7 @@ class CustomerController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:customers,email',
+            'email' => 'required|email|unique:users,email', // Kiểm tra unique ở bảng users
             'password' => [
                 'required',
                 'string',
@@ -70,38 +71,49 @@ class CustomerController extends Controller
             ],
             'address' => 'nullable|string|max:500'
         ], [
-            // Thông báo lỗi cho trường name
             'name.required' => 'Tên khách hàng là bắt buộc.',
-            'name.string' => 'Tên khách hàng phải là chuỗi ký tự.',
-            'name.max' => 'Tên khách hàng không được vượt quá 255 ký tự.',
-
-            // Thông báo lỗi cho trường email
             'email.required' => 'Email là bắt buộc.',
             'email.email' => 'Email không đúng định dạng.',
-            'email.unique' => 'Email này đã được sử dụng bởi khách hàng khác.',
-
-            // Thông báo lỗi cho trường password
+            'email.unique' => 'Email này đã được sử dụng.',
             'password.required' => 'Mật khẩu là bắt buộc.',
-            'password.string' => 'Mật khẩu phải là chuỗi ký tự.',
             'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự.',
             'password.regex' => 'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt.',
-
-            // Thông báo lỗi cho trường phone
-            'phone.regex' => 'Số điện thoại phải là 10-11 chữ số và chỉ chứa các ký tự số.',
-            'phone.unique' => 'Số điện thoại này đã được sử dụng bởi khách hàng khác.',
-
-            // Thông báo lỗi cho trường address
-            'address.string' => 'Địa chỉ phải là chuỗi ký tự.',
+            'phone.regex' => 'Số điện thoại phải là 10-11 chữ số.',
+            'phone.unique' => 'Số điện thoại này đã được sử dụng.',
             'address.max' => 'Địa chỉ không được vượt quá 500 ký tự.',
         ]);
 
-        // Hash password
-        $validated['password'] = Hash::make($validated['password']);
+        try {
+            DB::beginTransaction();
 
-        Customer::create($validated);
+            // 1. Tạo User với password (CHỈ lưu password ở đây)
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']), // Password chỉ ở users
+            ]);
 
-        return redirect()->route('admin.customers.index')
-            ->with('success', 'Khách hàng đã được tạo thành công!');
+            // 2. Tạo Customer KHÔNG có password
+            Customer::create([
+                'user_id' => $user->id,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                // BỎ password vì bảng customers không có cột này
+                'phone' => $validated['phone'],
+                'address' => $validated['address'],
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('admin.customers.index')
+                ->with('success', 'Khách hàng đã được tạo thành công!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -109,7 +121,7 @@ class CustomerController extends Controller
      */
     public function show(Customer $customer)
     {
-        $customer->load(['orders' => function($query) {
+        $customer->load(['user', 'orders' => function($query) {
             $query->orderBy('created_at', 'desc')->limit(10);
         }]);
 
@@ -121,6 +133,7 @@ class CustomerController extends Controller
      */
     public function edit(Customer $customer)
     {
+        $customer->load('user');
         return view('admin.customers.edit', compact('customer'));
     }
 
@@ -134,10 +147,10 @@ class CustomerController extends Controller
             'email' => [
                 'required',
                 'email',
-                Rule::unique('customers')->ignore($customer->id),
+                Rule::unique('users', 'email')->ignore($customer->user_id),
             ],
             'password' => [
-                'nullable',
+                'nullable', // Không bắt buộc khi update
                 'string',
                 'min:8',
                 'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
@@ -149,41 +162,52 @@ class CustomerController extends Controller
             ],
             'address' => 'nullable|string|max:500'
         ], [
-            // Thông báo lỗi cho trường name
             'name.required' => 'Tên khách hàng là bắt buộc.',
-            'name.string' => 'Tên khách hàng phải là chuỗi ký tự.',
-            'name.max' => 'Tên khách hàng không được vượt quá 255 ký tự.',
-
-            // Thông báo lỗi cho trường email
             'email.required' => 'Email là bắt buộc.',
             'email.email' => 'Email không đúng định dạng.',
-            'email.unique' => 'Email này đã được sử dụng bởi khách hàng khác.',
-
-            // Thông báo lỗi cho trường password
-            'password.string' => 'Mật khẩu phải là chuỗi ký tự.',
+            'email.unique' => 'Email này đã được sử dụng.',
             'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự.',
             'password.regex' => 'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt.',
-
-            // Thông báo lỗi cho trường phone
-            'phone.regex' => 'Số điện thoại phải là 10-11 chữ số và chỉ chứa các ký tự số.',
-            'phone.unique' => 'Số điện thoại này đã được sử dụng bởi khách hàng khác.',
-
-            // Thông báo lỗi cho trường address
-            'address.string' => 'Địa chỉ phải là chuỗi ký tự.',
+            'phone.regex' => 'Số điện thoại phải là 10-11 chữ số.',
+            'phone.unique' => 'Số điện thoại này đã được sử dụng.',
             'address.max' => 'Địa chỉ không được vượt quá 500 ký tự.',
         ]);
 
-        // Only update password if provided
-        if (!empty($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        } else {
-            unset($validated['password']);
+        try {
+            DB::beginTransaction();
+
+            // 1. Cập nhật User (password chỉ ở đây)
+            $userData = [
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+            ];
+
+            // Nếu có password mới, cập nhật vào User
+            if (!empty($validated['password'])) {
+                $userData['password'] = Hash::make($validated['password']);
+            }
+
+            $customer->user->update($userData);
+
+            // 2. Cập nhật Customer (KHÔNG có password)
+            $customer->update([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+                'address' => $validated['address'],
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('admin.customers.show', $customer)
+                ->with('success', 'Thông tin khách hàng đã được cập nhật!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
-
-        $customer->update($validated);
-
-        return redirect()->route('admin.customers.show', $customer)
-            ->with('success', 'Thông tin khách hàng đã được cập nhật!');
     }
 
     /**
@@ -197,9 +221,76 @@ class CustomerController extends Controller
                 ->with('error', 'Không thể xóa khách hàng có đơn hàng!');
         }
 
-        $customer->delete();
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.customers.index')
-            ->with('success', 'Khách hàng đã được xóa thành công!');
+            $user = $customer->user;
+
+            // Xóa customer trước
+            $customer->delete();
+
+            // Xóa user sau
+            if ($user) {
+                $user->delete();
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.customers.index')
+                ->with('success', 'Khách hàng đã được xóa thành công!');
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return redirect()->route('admin.customers.index')
+                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reset customer password
+     */
+    public function resetPassword(Request $request, Customer $customer)
+    {
+        $request->validate([
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/'
+            ],
+        ], [
+            'password.required' => 'Mật khẩu là bắt buộc.',
+            'password.min' => 'Mật khẩu phải có ít nhất 8 ký tự.',
+            'password.confirmed' => 'Xác nhận mật khẩu không khớp.',
+            'password.regex' => 'Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt.',
+        ]);
+
+        try {
+            // Cập nhật password trong bảng users
+            $customer->user->update([
+                'password' => Hash::make($request->password)
+            ]);
+
+            return redirect()->route('admin.customers.show', $customer)
+                ->with('success', 'Đặt lại mật khẩu thành công!');
+
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Get customer password info (for debugging)
+     */
+    public function getPasswordInfo(Customer $customer)
+    {
+        return response()->json([
+            'has_user' => $customer->user !== null,
+            'user_id' => $customer->user_id,
+            'password_exists' => $customer->user && !empty($customer->user->password),
+            'password_hash' => $customer->user ? substr($customer->user->password, 0, 20) . '...' : null,
+        ]);
     }
 }

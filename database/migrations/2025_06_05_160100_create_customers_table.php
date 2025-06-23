@@ -13,11 +13,13 @@ return new class extends Migration
     {
         Schema::create('customers', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('user_id');
             $table->string('name'); // Tên khách hàng
             $table->string('email')->unique(); // Email khách hàng, unique
             $table->string('password'); // Mật khẩu
             $table->string('phone')->nullable(); // Số điện thoại, có thể null
             $table->text('address')->nullable(); // Địa chỉ, có thể null
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps(); // Thời gian tạo và cập nhật
         });
     }

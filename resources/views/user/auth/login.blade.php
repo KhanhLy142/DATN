@@ -37,8 +37,14 @@
 
                         <div class="mb-3">
                             <label for="password" class="form-label">Mật khẩu</label>
-                            <input type="password" id="password" name="password" class="form-control rounded-3"
-                                   placeholder="********" required>
+                            <div class="position-relative">
+                                <input type="password" id="password" name="password" class="form-control rounded-3 pe-5"
+                                       placeholder="********" required>
+                                <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y me-2 p-0 border-0 bg-transparent password-toggle"
+                                        data-target="password" style="z-index: 10;">
+                                    <i class="bi bi-eye text-muted" id="password-icon"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="form-check mb-3">
