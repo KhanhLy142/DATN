@@ -2,127 +2,215 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Product extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'name',
         'sku',
-        'base_price',
-        'stock',
         'brand_id',
         'category_id',
         'description',
+        'base_price',
+        'stock',
         'image',
         'status'
     ];
 
     protected $casts = [
         'base_price' => 'decimal:2',
-        'stock' => 'integer',
-        'status' => 'boolean'
+        'status' => 'integer'
     ];
 
-    public function products(){
-        return $this->hasMany(ProductDiscount::class, 'product_id', 'id');
-    }
-    /**
-     * Quan hệ với Brand
-     */
-    public function brand(): BelongsTo
-    {
-        return $this->belongsTo(Brand::class);
-    }
-
-    /**
-     * Quan hệ với Category
-     */
-    public function category(): BelongsTo
+    public function category()
     {
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * Quan hệ với ProductVariant
-     */
-    public function variants(): HasMany
+    public function brand()
     {
-        return $this->hasMany(ProductVariant::class);
+        return $this->belongsTo(Brand::class);
     }
 
-    /**
-     * Quan hệ với Inventory
-     */
-    public function inventory(): HasOne
+    public function productDiscounts()
     {
-        return $this->hasOne(Inventory::class);
+        return $this->hasMany(ProductDiscount::class, 'product_id');
     }
 
-    public function importItems()
+    public function discounts()
     {
-        return $this->hasMany(ProductImportItem::class);
+        return $this->belongsToMany(Discount::class, 'product_discounts', 'product_id', 'discount_id');
     }
 
-    /**
-     * Lấy số lượng tồn kho
-     */
-    public function getStockQuantityAttribute(): int
+    public function variants()
     {
-        return $this->inventory ? $this->inventory->quantity : 0;
+        return $this->hasMany(ProductVariant::class, 'product_id');
     }
 
-    /**
-     * Scope để lấy sản phẩm đang active
-     */
+    public function inventory()
+    {
+        return $this->hasOne(Inventory::class, 'product_id');
+    }
+
+    public function getActiveDiscount()
+    {
+        $productDiscount = $this->productDiscounts()
+            ->with('discount')
+            ->whereHas('discount', function($query) {
+                $query->where('is_active', true)
+                    ->where('start_date', '<=', now())
+                    ->where('end_date', '>=', now());
+            })
+            ->first();
+
+        return $productDiscount ? $productDiscount->discount : null;
+    }
+
+    public function getFinalPriceAttribute()
+    {
+        $activeDiscount = $this->getActiveDiscount();
+
+        if ($activeDiscount) {
+            return $activeDiscount->getFinalPrice($this->base_price);
+        }
+
+        return $this->base_price;
+    }
+
+    public function getPriceAttribute()
+    {
+        return $this->base_price;
+    }
+
+    public function getHasDiscountAttribute()
+    {
+        return $this->getActiveDiscount() !== null;
+    }
+
+    public function getDiscountPercentageAttribute()
+    {
+        $activeDiscount = $this->getActiveDiscount();
+
+        if ($activeDiscount) {
+            return $activeDiscount->getDiscountPercentage($this->base_price);
+        }
+
+        return 0;
+    }
+
+    public function getBestDiscountAttribute()
+    {
+        return $this->getActiveDiscount();
+    }
+
+    public function getIsActiveAttribute()
+    {
+        return $this->status == 1;
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 1);
     }
 
-    /**
-     * Scope để lấy sản phẩm theo brand
-     */
-    public function scopeByBrand($query, $brandId)
+    public function scopeInStock($query)
     {
-        return $query->where('brand_id', $brandId);
+        return $query->where('stock', '>', 0);
     }
 
-    /**
-     * Scope để lấy sản phẩm theo category
-     */
-    public function scopeByCategory($query, $categoryId)
+    public function getFormattedPriceAttribute()
     {
-        return $query->where('category_id', $categoryId);
+        return number_format($this->base_price, 0, ',', '.') . 'đ';
     }
 
-    /**
-     * Format giá tiền
-     */
-    public function getFormattedPriceAttribute(): string
+    public function getFormattedFinalPriceAttribute()
     {
-        return number_format($this->base_price, 0, ',', '.') . ' ₫';
+        return number_format($this->final_price, 0, ',', '.') . 'đ';
     }
 
-    /**
-     * Lấy URL ảnh
-     */
-    public function getImageUrlAttribute(): string
+    public function getTotalStockAttribute()
     {
-        if ($this->image) {
-            return asset($this->image);
+        $variantStock = $this->variants()->sum('stock_quantity');
+        return $variantStock > 0 ? $variantStock : $this->stock;
+    }
+
+    public function hasVariants()
+    {
+        return $this->variants()->count() > 0;
+    }
+
+    public function getImagesArrayAttribute()
+    {
+        if (!$this->image) {
+            return [];
         }
-        return asset('images/no-image.png'); // Ảnh mặc định
+
+        return array_filter(explode(',', $this->image));
     }
 
-    public function activeDiscounts()
+    public function getMainImageAttribute()
     {
-        return $this->discounts()
-            ->where('is_active', true)
-            ->where('start_date', '<=', now())
-            ->where('end_date', '>=', now());
+        $images = $this->images_array;
+        return !empty($images) ? $images[0] : null;
+    }
+
+    public function getMainImageUrlAttribute()
+    {
+        $mainImage = $this->main_image;
+        return $mainImage ? asset($mainImage) : null;
+    }
+
+    public function getAllImageUrlsAttribute()
+    {
+        $images = $this->images_array;
+        return array_map(function($image) {
+            return asset($image);
+        }, $images);
+    }
+
+    public function hasMultipleImages()
+    {
+        return count($this->images_array) > 1;
+    }
+
+    public function getImageCountAttribute()
+    {
+        return count($this->images_array);
+    }
+
+    public function getImageByIndex($index)
+    {
+        $images = $this->images_array;
+        return isset($images[$index]) ? $images[$index] : null;
+    }
+
+    public function getImageUrlByIndex($index)
+    {
+        $image = $this->getImageByIndex($index);
+        return $image ? asset($image) : null;
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function approvedReviews()
+    {
+        return $this->hasMany(Review::class)->where('status', 1);
+    }
+
+    public function getAverageRatingAttribute()
+    {
+        return $this->approvedReviews()->avg('rating') ?: 0;
+    }
+
+    public function getTotalReviewsAttribute()
+    {
+        return $this->approvedReviews()->count();
     }
 }

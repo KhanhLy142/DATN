@@ -6,7 +6,6 @@
     <div class="container py-5">
         <h4 class="fw-bold text-center text-pink fs-2 mb-4">Chi tiết khách hàng</h4>
 
-        {{-- Thông báo --}}
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
@@ -15,7 +14,6 @@
         @endif
 
         <div class="row">
-            {{-- Thông tin khách hàng --}}
             <div class="col-md-6">
                 <div class="card shadow-sm rounded-4 mb-4">
                     <div class="card-header bg-light">
@@ -66,7 +64,6 @@
                 </div>
             </div>
 
-            {{-- Thống kê đơn hàng --}}
             <div class="col-md-6">
                 <div class="card shadow-sm rounded-4 mb-4">
                     <div class="card-header bg-light">
@@ -117,7 +114,6 @@
             </div>
         </div>
 
-        {{-- Lịch sử đơn hàng gần đây --}}
         <div class="card shadow-sm rounded-4">
             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold">
@@ -175,7 +171,6 @@
             </div>
         </div>
 
-        {{-- Nút quay lại --}}
         <div class="d-flex justify-content-end mt-4 pt-3 border-top">
             <a href="{{ route('admin.customers.index') }}" class="btn btn-secondary">
                 Quay lại

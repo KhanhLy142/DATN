@@ -30,6 +30,67 @@
                     </div>
                 </div>
 
+                @if($shipping->ghn_province_id || $shipping->ghn_district_id || $shipping->ghn_ward_code)
+                    <div class="mb-3">
+                        <p class="mb-2">
+                            <i class="bi bi-geo-alt-fill me-2 text-success"></i>
+                            <strong>Thông tin địa chỉ GHN:</strong>
+                        </p>
+                        <div class="card bg-light border-0">
+                            <div class="card-body p-3">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Mã tỉnh GHN:</small><br>
+                                        <span class="fw-semibold">{{ $shipping->ghn_province_id ?? 'N/A' }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Mã quận GHN:</small><br>
+                                        <span class="fw-semibold">{{ $shipping->ghn_district_id ?? 'N/A' }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Mã phường GHN:</small><br>
+                                        <span class="fw-semibold">{{ $shipping->ghn_ward_code ?? 'N/A' }}</span>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <small class="text-muted">Trạng thái API:</small><br>
+                                        @if($shipping->ghn_province_id && $shipping->ghn_district_id && $shipping->ghn_ward_code)
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Sẵn sàng
+                                            </span>
+                                        @else
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="bi bi-exclamation-triangle"></i> Chưa đầy đủ
+                                            </span>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-12">
+                                        <small class="text-muted">Địa chỉ đầy đủ:</small><br>
+                                        <span class="fw-semibold">
+                                            {{ $shipping->shipping_address }}
+                                            @if($shipping->ward_name || $shipping->district_name || $shipping->province_name)
+                                                , {{ $shipping->ward_name }}
+                                                , {{ $shipping->district_name }}
+                                                , {{ $shipping->province_name }}
+                                            @endif
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="mb-3">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Chưa có thông tin GHN:</strong>
+                            Đơn hàng này chưa được tích hợp với API Giao Hàng Nhanh.
+                            Cần cập nhật thông tin địa chỉ để sử dụng tính năng tính phí và theo dõi vận chuyển.
+                        </div>
+                    </div>
+                @endif
+
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <p class="card-text">
@@ -37,10 +98,10 @@
                             <strong>Phương thức vận chuyển:</strong>
                             @switch($shipping->shipping_method)
                                 @case('standard')
-                                    <span class="badge bg-info">Giao hàng tiêu chuẩn</span>
+                                    <span class="badge bg-info">Giao hàng tiêu chuẩn (2-3 ngày)</span>
                                     @break
                                 @case('express')
-                                    <span class="badge bg-warning text-dark">Giao hàng nhanh</span>
+                                    <span class="badge bg-warning text-dark">Giao hàng nhanh (1 ngày)</span>
                                     @break
                                 @default
                                     <span class="badge bg-secondary">{{ ucfirst($shipping->shipping_method) }}</span>
@@ -49,13 +110,16 @@
                     </div>
                     <div class="col-md-6">
                         <p class="card-text">
-                            <i class="bi bi-toggle-{{ $shipping->shipping_status === 'delivered' ? 'on' : 'off' }} me-2 text-{{ $shipping->shipping_status === 'delivered' ? 'success' : ($shipping->shipping_status === 'shipped' ? 'primary' : 'warning') }}"></i>
+                            <i class="bi bi-toggle-{{ $shipping->shipping_status === 'delivered' ? 'on' : 'off' }} me-2 text-{{ $shipping->shipping_status === 'delivered' ? 'success' : ($shipping->shipping_status === 'shipping' ? 'primary' : ($shipping->shipping_status === 'confirmed' ? 'info' : 'warning')) }}"></i>
                             <strong>Trạng thái:</strong>
                             @switch($shipping->shipping_status)
                                 @case('pending')
-                                    <span class="badge bg-warning">Chờ giao hàng</span>
+                                    <span class="badge bg-warning text-dark">Chờ xác nhận</span>
                                     @break
-                                @case('shipped')
+                                @case('confirmed')
+                                    <span class="badge bg-info">Đã xác nhận</span>
+                                    @break
+                                @case('shipping')
                                     <span class="badge bg-primary">Đang giao hàng</span>
                                     @break
                                 @case('delivered')
@@ -86,6 +150,15 @@
                                 <i class="bi bi-cash-coin me-2 text-success"></i>
                                 <strong>Phí vận chuyển:</strong>
                                 <span class="fw-bold text-success fs-5">{{ number_format($shipping->shipping_fee) }}đ</span>
+                                @if($shipping->ghn_province_id && $shipping->ghn_district_id && $shipping->ghn_ward_code)
+                                    <br><small class="text-muted">
+                                        <i class="bi bi-info-circle"></i> Tính từ API GHN
+                                    </small>
+                                @else
+                                    <br><small class="text-muted">
+                                        <i class="bi bi-calculator"></i> Phí cố định
+                                    </small>
+                                @endif
                             </p>
                         @else
                             <p class="card-text">
@@ -96,29 +169,16 @@
                         @endif
                     </div>
                     <div class="col-md-6">
-                        @if($shipping->province)
+                        @if($shipping->province_name)
                             <p class="card-text">
                                 <i class="bi bi-map me-2 text-primary"></i>
                                 <strong>Tỉnh/Thành phố:</strong>
-                                <span class="fw-semibold">{{ $shipping->province }}</span>
+                                <span class="fw-semibold">{{ $shipping->province_name }}</span>
+                                <span class="badge bg-success ms-1" style="font-size: 0.7em;">GHN</span>
                             </p>
                         @endif
                     </div>
                 </div>
-
-                @if($shipping->shipping_note)
-                    <div class="mb-3">
-                        <p class="card-text">
-                            <i class="bi bi-chat-text me-2 text-secondary"></i>
-                            <strong>Ghi chú vận chuyển:</strong>
-                        </p>
-                        <div class="card bg-light border-0">
-                            <div class="card-body p-3">
-                                {{ $shipping->shipping_note }}
-                            </div>
-                        </div>
-                    </div>
-                @endif
 
                 <div class="row mb-3">
                     <div class="col-md-6">
@@ -135,7 +195,6 @@
                     </div>
                 </div>
 
-                {{-- Thông tin đơn hàng liên quan --}}
                 @if($shipping->order)
                     <div class="mb-3">
                         <p class="mb-2">
@@ -147,15 +206,33 @@
                                 <div class="row">
                                     <div class="col-md-4">
                                         <small class="text-muted">Khách hàng:</small><br>
-                                        <span class="fw-semibold">{{ $shipping->order->customer_name ?? 'N/A' }}</span>
+                                        <span class="fw-semibold">{{ $shipping->order->customer->name ?? 'N/A' }}</span>
                                     </div>
                                     <div class="col-md-4">
                                         <small class="text-muted">Trạng thái đơn hàng:</small><br>
-                                        <span class="badge bg-info">{{ ucfirst($shipping->order->status ?? 'N/A') }}</span>
+                                        @switch($shipping->order->status ?? '')
+                                            @case('pending')
+                                                <span class="badge bg-warning text-dark">Chờ xử lý</span>
+                                                @break
+                                            @case('processing')
+                                                <span class="badge bg-info">Đang xử lý</span>
+                                                @break
+                                            @case('shipped')
+                                                <span class="badge bg-primary">Đã giao hàng</span>
+                                                @break
+                                            @case('delivered')
+                                                <span class="badge bg-success">Đã nhận hàng</span>
+                                                @break
+                                            @case('cancelled')
+                                                <span class="badge bg-danger">Đã hủy</span>
+                                                @break
+                                            @default
+                                                <span class="badge bg-secondary">{{ ucfirst($shipping->order->status ?? 'N/A') }}</span>
+                                        @endswitch
                                     </div>
                                     <div class="col-md-4">
                                         <small class="text-muted">Tổng tiền:</small><br>
-                                        <span class="fw-bold text-success">{{ number_format($shipping->order->total ?? 0) }}đ</span>
+                                        <span class="fw-bold text-success">{{ number_format($shipping->order->total_amount ?? 0) }}đ</span>
                                     </div>
                                 </div>
                             </div>
@@ -163,7 +240,6 @@
                     </div>
                 @endif
 
-                {{-- Timeline trạng thái vận chuyển --}}
                 <div class="mb-3">
                     <p class="mb-2">
                         <i class="bi bi-clock-history me-2 text-info"></i>
@@ -172,7 +248,7 @@
                     <div class="card bg-light border-0">
                         <div class="card-body p-3">
                             <div class="row">
-                                <div class="col-md-4 text-center">
+                                <div class="col-md-3 text-center">
                                     <div class="d-flex flex-column align-items-center">
                                         <div class="bg-success rounded-circle p-2 mb-2">
                                             <i class="bi bi-plus-circle text-white"></i>
@@ -181,23 +257,36 @@
                                         <small class="fw-semibold">{{ $shipping->created_at->format('d/m H:i') }}</small>
                                     </div>
                                 </div>
-                                <div class="col-md-4 text-center">
+                                <div class="col-md-3 text-center">
                                     <div class="d-flex flex-column align-items-center">
-                                        <div class="bg-{{ $shipping->shipping_status === 'shipped' || $shipping->shipping_status === 'delivered' ? 'success' : 'secondary' }} rounded-circle p-2 mb-2">
-                                            <i class="bi bi-truck text-white"></i>
+                                        <div class="bg-{{ in_array($shipping->shipping_status, ['confirmed', 'shipping', 'delivered']) ? 'success' : 'secondary' }} rounded-circle p-2 mb-2">
+                                            <i class="bi bi-check-circle text-white"></i>
                                         </div>
-                                        <small class="text-muted">Bắt đầu giao hàng</small>
-                                        @if($shipping->shipping_status === 'shipped' || $shipping->shipping_status === 'delivered')
+                                        <small class="text-muted">Xác nhận đơn hàng</small>
+                                        @if(in_array($shipping->shipping_status, ['confirmed', 'shipping', 'delivered']))
                                             <small class="fw-semibold">{{ $shipping->updated_at->format('d/m H:i') }}</small>
                                         @else
-                                            <small class="text-muted">Chưa cập nhật</small>
+                                            <small class="text-muted">Chưa xác nhận</small>
                                         @endif
                                     </div>
                                 </div>
-                                <div class="col-md-4 text-center">
+                                <div class="col-md-3 text-center">
+                                    <div class="d-flex flex-column align-items-center">
+                                        <div class="bg-{{ in_array($shipping->shipping_status, ['shipping', 'delivered']) ? 'success' : 'secondary' }} rounded-circle p-2 mb-2">
+                                            <i class="bi bi-truck text-white"></i>
+                                        </div>
+                                        <small class="text-muted">Bắt đầu giao hàng</small>
+                                        @if(in_array($shipping->shipping_status, ['shipping', 'delivered']))
+                                            <small class="fw-semibold">{{ $shipping->updated_at->format('d/m H:i') }}</small>
+                                        @else
+                                            <small class="text-muted">Chưa bắt đầu</small>
+                                        @endif
+                                    </div>
+                                </div>
+                                <div class="col-md-3 text-center">
                                     <div class="d-flex flex-column align-items-center">
                                         <div class="bg-{{ $shipping->shipping_status === 'delivered' ? 'success' : 'secondary' }} rounded-circle p-2 mb-2">
-                                            <i class="bi bi-check-circle text-white"></i>
+                                            <i class="bi bi-check-circle-fill text-white"></i>
                                         </div>
                                         <small class="text-muted">Giao hàng thành công</small>
                                         @if($shipping->shipping_status === 'delivered')
@@ -212,9 +301,52 @@
                     </div>
                 </div>
 
+                @if($shipping->shipping_status !== 'delivered')
+                    <div class="mb-3">
+                        <p class="mb-2">
+                            <i class="bi bi-lightning me-2 text-warning"></i>
+                            <strong>Hành động nhanh:</strong>
+                        </p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            @if($shipping->shipping_status == 'pending')
+                                <form action="{{ route('admin.shippings.mark-shipped', $shipping->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-info btn-sm"
+                                            onclick="return confirm('Xác nhận đơn hàng này đã sẵn sàng giao?')">
+                                        <i class="bi bi-check-circle me-1"></i>Xác nhận đơn hàng
+                                    </button>
+                                </form>
+                            @elseif($shipping->shipping_status == 'confirmed')
+                                <form action="{{ route('admin.shippings.mark-shipped', $shipping->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-primary btn-sm"
+                                            onclick="return confirm('Bắt đầu giao hàng cho đơn này?')">
+                                        <i class="bi bi-truck me-1"></i>Bắt đầu giao hàng
+                                    </button>
+                                </form>
+                            @elseif($shipping->shipping_status == 'shipping')
+                                <form action="{{ route('admin.shippings.mark-delivered', $shipping->id) }}" method="POST" class="d-inline">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button type="submit" class="btn btn-success btn-sm"
+                                            onclick="return confirm('Xác nhận đã giao hàng thành công?')">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Đánh dấu đã giao
+                                    </button>
+                                </form>
+                            @endif
+
+                            <a href="{{ route('admin.shippings.edit', $shipping->id) }}" class="btn btn-warning btn-sm">
+                                <i class="bi bi-pencil me-1"></i>Chỉnh sửa
+                            </a>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="d-flex justify-content-end mt-4 pt-3 border-top">
                     <a href="{{ route('admin.shippings.index') }}" class="btn btn-secondary">
-                        Quay lại
+                        <i class="bi bi-arrow-left me-1"></i>Quay lại
                     </a>
                 </div>
             </div>
@@ -224,6 +356,14 @@
     <script>
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(function() {
+                alert('Đã sao chép mã vận đơn: ' + text);
+            }, function() {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
                 alert('Đã sao chép mã vận đơn: ' + text);
             });
         }

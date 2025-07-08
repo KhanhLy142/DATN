@@ -88,7 +88,6 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
 
-                                <!-- Preview logo -->
                                 <div id="logo-preview" class="mt-2" style="display: none;">
                                     <img id="preview-image" src="" alt="Logo preview"
                                          class="img-thumbnail" style="max-width: 150px; max-height: 150px;">

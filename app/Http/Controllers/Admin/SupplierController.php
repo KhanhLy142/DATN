@@ -5,12 +5,31 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 
 class SupplierController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $suppliers = Supplier::latest()->paginate(10);
+        $query = Supplier::query();
+
+        if ($request->has('search') && !empty(trim($request->search))) {
+            $searchTerm = trim($request->search);
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('name', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('email', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('phone', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        if ($request->has('status') && $request->status !== '' && $request->status !== null) {
+            $query->where('status', $request->status);
+        }
+
+        $suppliers = $query->orderBy('name')->paginate(15);
+
+        $suppliers->appends($request->query());
+
         return view('admin.suppliers.index', compact('suppliers'));
     }
 
@@ -21,15 +40,19 @@ class SupplierController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:suppliers',
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:suppliers,name',
+            'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'status' => 'boolean'
+        ], [
+            'name.required' => 'Tên nhà cung cấp là bắt buộc',
+            'name.unique' => 'Tên nhà cung cấp đã tồn tại',
+            'email.email' => 'Email không đúng định dạng'
         ]);
 
-        Supplier::create($request->all());
+        Supplier::create($validated);
 
         return redirect()->route('admin.suppliers.index')
             ->with('success', 'Nhà cung cấp đã được tạo thành công!');
@@ -37,6 +60,7 @@ class SupplierController extends Controller
 
     public function show(Supplier $supplier)
     {
+        $supplier->load('brands');
         return view('admin.suppliers.show', compact('supplier'));
     }
 
@@ -47,29 +71,45 @@ class SupplierController extends Controller
 
     public function update(Request $request, Supplier $supplier)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:suppliers,email,' . $supplier->id,
+        $validated = $request->validate([
+            'name' => 'required|string|max:255|unique:suppliers,name,' . $supplier->id,
+            'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string',
             'status' => 'boolean'
+        ], [
+            'name.required' => 'Tên nhà cung cấp là bắt buộc',
+            'name.unique' => 'Tên nhà cung cấp đã tồn tại',
+            'email.email' => 'Email không đúng định dạng'
         ]);
 
-        $supplier->update($request->all());
+        $supplier->update($validated);
 
         return redirect()->route('admin.suppliers.index')
-            ->with('success', 'Nhà cung cấp đã được cập nhật!');
+            ->with('success', 'Nhà cung cấp đã được cập nhật thành công!');
     }
 
     public function destroy(Supplier $supplier)
     {
         if ($supplier->brands()->count() > 0) {
-            return back()->with('error', 'Không thể xóa nhà cung cấp này vì đang có thương hiệu liên kết!');
+            return redirect()->route('admin.suppliers.index')
+                ->with('error', 'Không thể xóa nhà cung cấp vì còn có thương hiệu liên quan!');
         }
 
         $supplier->delete();
 
         return redirect()->route('admin.suppliers.index')
-            ->with('success', 'Nhà cung cấp đã được xóa!');
+            ->with('success', 'Nhà cung cấp đã được xóa thành công!');
+    }
+
+    public function toggleStatus(Supplier $supplier): JsonResponse
+    {
+        $supplier->update(['status' => !$supplier->status]);
+
+        return response()->json([
+            'success' => true,
+            'status' => $supplier->status,
+            'message' => 'Trạng thái đã được cập nhật thành công!'
+        ]);
     }
 }

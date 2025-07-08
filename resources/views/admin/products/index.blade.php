@@ -6,7 +6,6 @@
     <div class="container mt-5">
         <h4 class="fw-bold text-center text-pink fs-2 mb-4">Danh sách sản phẩm</h4>
 
-        {{-- Thông báo --}}
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                 <div class="d-flex align-items-center">
@@ -33,7 +32,6 @@
             </div>
         @endif
 
-        <!-- Filter và Search -->
         <div class="row mb-4">
             <div class="col-md-12">
                 <form method="GET" action="{{ route('admin.products.index') }}" class="row g-3">
@@ -100,29 +98,36 @@
                     <tr>
                         <td>{{ $products->firstItem() + $index }}</td>
 
-                        {{-- Ảnh sản phẩm --}}
                         <td>
                             @if ($product->image)
-                                <img src="{{ asset($product->image) }}" alt="Ảnh" width="60" class="rounded">
+                                <div class="position-relative d-inline-block">
+                                    <img src="{{ $product->main_image_url }}"
+                                         alt="Ảnh {{ $product->name }}"
+                                         width="60"
+                                         height="60"
+                                         class="rounded"
+                                         style="object-fit: cover;">
+                                </div>
                             @else
-                                <span class="text-muted fst-italic">Không có ảnh</span>
+                                <div class="text-center text-muted" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; border: 1px dashed #ddd; border-radius: 4px;">
+                                    <i class="bi bi-image" style="font-size: 1.2rem;"></i>
+                                </div>
                             @endif
                         </td>
 
-                        {{-- Tên sản phẩm --}}
                         <td>
                             <strong>{{ $product->name }}</strong>
+                            @if($product->image_count > 1)
+                                <br><small class="text-muted">{{ $product->image_count }} ảnh</small>
+                            @endif
                         </td>
 
-                        {{-- SKU --}}
                         <td>
                             <span class="badge bg-secondary">{{ $product->sku }}</span>
                         </td>
 
-                        {{-- Giá sản phẩm --}}
                         <td>
                             @if ($product->variants->count())
-                                {{-- Hiển thị khoảng giá từ variants --}}
                                 <span class="text-success fw-bold">
                                     Từ ₫{{ number_format($product->variants->min('price'), 0, ',', '.') }}
                                 </span>
@@ -132,28 +137,23 @@
                                     ₫{{ number_format($product->variants->max('price'), 0, ',', '.') }})
                                 </small>
                             @else
-                                {{-- Hiển thị giá chính --}}
                                 <span class="fw-bold">₫{{ number_format($product->base_price, 0, ',', '.') }}</span>
                             @endif
                         </td>
 
-                        {{-- Tồn kho --}}
                         <td>
                             @if ($product->variants->count())
-                                {{-- Tồn kho từ variants --}}
                                 <span class="badge bg-info">
                                     {{ $product->variants->sum('stock_quantity') }}
                                     <small>(variants)</small>
                                 </span>
                             @else
-                                {{-- Tồn kho chính --}}
                                 <span class="badge {{ $product->stock > 0 ? 'bg-success' : 'bg-danger' }}">
                                     {{ $product->stock }}
                                 </span>
                             @endif
                         </td>
 
-                        {{-- Số lượng biến thể --}}
                         <td>
                             @if($product->variants->count())
                                 <span class="badge bg-info">
@@ -164,7 +164,6 @@
                             @endif
                         </td>
 
-                        {{-- Trạng thái --}}
                         <td>
                             @if ($product->status)
                                 <span class="badge bg-success">Hiển thị</span>
@@ -173,28 +172,23 @@
                             @endif
                         </td>
 
-                        {{-- Danh mục & Thương hiệu --}}
                         <td>{{ $product->category->name ?? '---' }}</td>
                         <td>{{ $product->brand->name ?? '---' }}</td>
 
-                        {{-- Thao tác với icon --}}
                         <td>
                             <div class="d-flex gap-2">
-                                {{-- Xem chi tiết --}}
                                 <a href="{{ route('admin.products.show', $product->id) }}"
                                    class="btn btn-outline-info btn-sm"
                                    title="Xem chi tiết">
                                     <i class="bi bi-eye"></i>
                                 </a>
 
-                                {{-- Sửa --}}
                                 <a href="{{ route('admin.products.edit', $product->id) }}"
                                    class="btn btn-outline-warning btn-sm"
                                    title="Sửa sản phẩm">
                                     <i class="bi bi-pencil-square"></i>
                                 </a>
 
-                                {{-- Xóa --}}
                                 <form action="{{ route('admin.products.destroy', $product->id) }}"
                                       method="POST"
                                       onsubmit="return confirm('Bạn có chắc muốn xoá sản phẩm này không?')"
@@ -218,8 +212,43 @@
                 </tbody>
             </table>
 
-            {{-- Phân trang --}}
             @include('admin.layouts.pagination', ['paginator' => $products, 'itemName' => 'sản phẩm'])
         </div>
     </div>
+
+    <style>
+        .table td img {
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .table td img:hover {
+            transform: scale(1.1);
+            z-index: 10;
+            position: relative;
+        }
+
+        .badge {
+            font-size: 0.65rem;
+        }
+
+        .table td [title] {
+            cursor: help;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const imageContainers = document.querySelectorAll('.position-relative');
+
+            imageContainers.forEach(container => {
+                const badge = container.querySelector('.badge');
+                if (badge) {
+                    const img = container.querySelector('img');
+                    if (img) {
+                        img.setAttribute('title', `Sản phẩm có ${badge.textContent.trim()} ảnh. Click "Xem chi tiết" để xem tất cả.`);
+                    }
+                }
+            });
+        });
+    </script>
 @endsection

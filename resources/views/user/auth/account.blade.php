@@ -18,13 +18,12 @@
 @section('content')
     <div class="container py-5">
         <div class="row">
-            <!-- Sidebar Menu -->
             <div class="col-lg-3 mb-4">
                 <div class="card shadow-sm rounded-4">
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
-                            <h6 class="mt-2 mb-0 fw-bold">{{ $user->name }}</h6>
-                            <small class="text-muted">Thành viên từ {{ $user->created_at->format('m/Y') }}</small>
+                            <h6 class="mt-2 mb-0 fw-bold">{{ Auth::guard('customer')->user()->name }}</h6>
+                            <small class="text-muted">Thành viên từ {{ Auth::guard('customer')->user()->created_at->format('m/Y') }}</small>
                         </div>
 
                         <div class="list-group list-group-flush">
@@ -36,18 +35,20 @@
                                 <i class="bi bi-shield-check me-2"></i>
                                 Đổi mật khẩu
                             </a>
-                            <a href="#" class="list-group-item list-group-item-action border-0 rounded-3 text-danger">
-                                <i class="bi bi-box-arrow-right me-2"></i>
-                                Đăng xuất
-                            </a>
+                            <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="list-group-item list-group-item-action border-0 rounded-3 text-danger w-100 text-start"
+                                        style="background: none; border: none;">
+                                    <i class="bi bi-box-arrow-right me-2"></i>
+                                    Đăng xuất
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Main Content -->
             <div class="col-lg-9">
-                <!-- Header -->
                 <div class="card shadow-sm rounded-4 p-4 mb-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -60,7 +61,6 @@
                     </div>
                 </div>
 
-                <!-- Thông báo thành công -->
                 @if (session('success'))
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         <i class="bi bi-check-circle-fill me-2"></i>
@@ -69,7 +69,6 @@
                     </div>
                 @endif
 
-                <!-- Thông tin cá nhân -->
                 <div class="card shadow-sm rounded-4 p-4 mb-4">
                     <h5 class="fw-bold mb-4">
                         <i class="bi bi-person-badge me-2 text-pink"></i>
@@ -80,13 +79,13 @@
                         <div class="col-md-6">
                             <div class="info-item">
                                 <label class="form-label text-muted small">Họ và tên</label>
-                                <p class="fw-semibold mb-0">{{ $customer ? $customer->name : $user->name }}</p>
+                                <p class="fw-semibold mb-0">{{ Auth::guard('customer')->user()->customer->name ?? Auth::guard('customer')->user()->name }}</p>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="info-item">
                                 <label class="form-label text-muted small">Email</label>
-                                <p class="fw-semibold mb-0">{{ $customer ? $customer->email : $user->email }}</p>
+                                <p class="fw-semibold mb-0">{{ Auth::guard('customer')->user()->customer->email ?? Auth::guard('customer')->user()->email }}</p>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -114,35 +113,4 @@
     </div>
 @endsection
 
-@push('styles')
-    <style>
-        .list-group-item.active {
-            background-color: var(--bs-pink);
-            border-color: var(--bs-pink);
-        }
 
-        .info-item {
-            padding: 0.75rem;
-            background-color: #f8f9fa;
-            border-radius: 0.5rem;
-            border-left: 3px solid #e91e63;
-        }
-
-        .stat-card {
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .avatar-wrapper:hover .btn {
-            opacity: 1;
-        }
-
-        .avatar-wrapper .btn {
-            opacity: 0.8;
-            transition: opacity 0.2s;
-        }
-    </style>
-@endpush

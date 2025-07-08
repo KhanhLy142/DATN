@@ -24,7 +24,6 @@ class Brand extends Model
         'status' => 'boolean',
     ];
 
-    // Scopes
     public function scopeActive($query)
     {
         return $query->where('status', true);
@@ -35,7 +34,6 @@ class Brand extends Model
         return $query->where('status', false);
     }
 
-    // Relationships
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
@@ -46,13 +44,11 @@ class Brand extends Model
         return $this->hasMany(Product::class);
     }
 
-    // Accessors
     public function getStatusTextAttribute()
     {
         return $this->status ? 'Hoạt động' : 'Ngưng hoạt động';
     }
 
-    // Mutators
     public function setNameAttribute($value)
     {
         $this->attributes['name'] = ucfirst(trim($value));

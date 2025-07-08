@@ -59,22 +59,20 @@ class ProductController extends Controller
             'brand_id'    => 'required|exists:brands,id',
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string',
-            'image'       => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+            'images'      => 'nullable|array|max:5',
+            'images.*'    => 'image|mimes:jpg,jpeg,png,gif|max:2048',
         ]);
 
-        // Generate SKU nếu không có
         if (empty($validated['sku'])) {
             $validated['sku'] = 'PRD-' . strtoupper(uniqid());
         }
 
-        // Xử lý upload ảnh
-        if ($request->hasFile('image')) {
-            $validated['image'] = $this->uploadImage($request);
+        if ($request->hasFile('images')) {
+            $validated['image'] = $this->uploadMultipleImages($request->file('images'));
         }
 
         $validated['status'] = $request->has('status') ? 1 : 0;
 
-        // Đặt stock mặc định nếu không có
         if (!isset($validated['stock'])) {
             $validated['stock'] = 0;
         }
@@ -82,7 +80,6 @@ class ProductController extends Controller
         try {
             $product = Product::create($validated);
 
-            // Thêm các biến thể
             if ($request->has('variants')) {
                 $totalVariantStock = 0;
                 foreach ($request->variants as $variant) {
@@ -102,7 +99,6 @@ class ProductController extends Controller
                     }
                 }
 
-                // Cập nhật tổng stock từ variants nếu có biến thể
                 if ($totalVariantStock > 0) {
                     $product->update(['stock' => $totalVariantStock]);
                 }
@@ -136,7 +132,8 @@ class ProductController extends Controller
             'brand_id'    => 'required|exists:brands,id',
             'category_id' => 'required|exists:categories,id',
             'description' => 'nullable|string',
-            'image'       => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+            'images'      => 'nullable|array|max:5',
+            'images.*'    => 'image|mimes:jpg,jpeg,png,gif|max:2048',
             'variants'    => 'nullable|array',
             'variants.*.variant_name' => 'nullable|string|max:255',
             'variants.*.price' => 'nullable|numeric|min:0',
@@ -147,29 +144,24 @@ class ProductController extends Controller
         try {
             $product = Product::findOrFail($id);
 
-            // Generate SKU nếu không có
             if (empty($validated['sku'])) {
                 $validated['sku'] = 'PRD-' . strtoupper(uniqid());
             }
 
-            // Xử lý upload ảnh
-            if ($request->hasFile('image')) {
-                $validated['image'] = $this->uploadImage($request, $product->image);
+            if ($request->hasFile('images')) {
+                $validated['image'] = $this->uploadMultipleImages($request->file('images'), $product->image);
             } else {
-                unset($validated['image']); // Không update ảnh nếu không upload
+                unset($validated['image']);
             }
 
             $validated['status'] = $request->has('status') ? 1 : 0;
 
-            // Đặt stock mặc định nếu không có
             if (!isset($validated['stock'])) {
                 $validated['stock'] = 0;
             }
 
-            // Update thông tin cơ bản của sản phẩm
             $product->update($validated);
 
-            // Xử lý cập nhật biến thể
             if ($request->has('variants')) {
                 $this->updateProductVariants($product, $request->variants);
             }
@@ -184,13 +176,11 @@ class ProductController extends Controller
 
     private function updateProductVariants($product, $variants)
     {
-        // Lấy danh sách ID biến thể hiện tại
         $existingVariantIds = $product->variants()->pluck('id')->toArray();
         $updatedVariantIds = [];
         $totalVariantStock = 0;
 
         foreach ($variants as $variantData) {
-            // Chỉ xử lý nếu có tên biến thể và giá
             if (!empty($variantData['variant_name']) && !empty($variantData['price'])) {
                 $variantStock = $variantData['stock_quantity'] ?? 0;
                 $totalVariantStock += $variantStock;
@@ -206,27 +196,23 @@ class ProductController extends Controller
                 ];
 
                 if (isset($variantData['id']) && !empty($variantData['id'])) {
-                    // Cập nhật biến thể hiện có
                     $variant = $product->variants()->find($variantData['id']);
                     if ($variant) {
                         $variant->update($variantAttributes);
                         $updatedVariantIds[] = $variant->id;
                     }
                 } else {
-                    // Tạo biến thể mới
                     $newVariant = $product->variants()->create($variantAttributes);
                     $updatedVariantIds[] = $newVariant->id;
                 }
             }
         }
 
-        // Xóa các biến thể không còn trong danh sách cập nhật
         $variantsToDelete = array_diff($existingVariantIds, $updatedVariantIds);
         if (!empty($variantsToDelete)) {
             $product->variants()->whereIn('id', $variantsToDelete)->delete();
         }
 
-        // Cập nhật tổng stock từ variants
         if ($totalVariantStock > 0) {
             $product->update(['stock' => $totalVariantStock]);
         }
@@ -244,46 +230,53 @@ class ProductController extends Controller
             $product = Product::findOrFail($id);
             $productName = $product->name;
 
-            // Xoá ảnh cũ nếu có
-            if ($product->image && file_exists(public_path($product->image))) {
-                unlink(public_path($product->image));
+            if ($product->image) {
+                $this->deleteProductImages($product->image);
             }
 
-            // Xoá biến thể và sản phẩm (cascade sẽ tự động xoá)
             $product->delete();
 
-            // ✅ FIX: Sử dụng route admin.products.index thay vì products.index
             return redirect()->route('admin.products.index')
                 ->with('success', 'Sản phẩm "' . $productName . '" đã được xóa thành công!');
 
         } catch (\Exception $e) {
-            // ✅ FIX: Sử dụng route admin.products.index thay vì products.index
             return redirect()->route('admin.products.index')
                 ->with('error', 'Có lỗi xảy ra khi xóa sản phẩm: ' . $e->getMessage());
         }
     }
 
-    private function uploadImage(Request $request, $oldPath = null)
+    private function uploadMultipleImages($images, $oldImageString = null)
     {
-        if ($request->hasFile('image')) {
-            // Xóa ảnh cũ nếu có
-            if ($oldPath && file_exists(public_path($oldPath))) {
-                unlink(public_path($oldPath));
-            }
-
-            $image = $request->file('image');
-            $imageName = time() . '_' . $image->getClientOriginalName();
-
-            // Tạo thư mục nếu chưa có
-            if (!file_exists(public_path('uploads/products'))) {
-                mkdir(public_path('uploads/products'), 0755, true);
-            }
-
-            $image->move(public_path('uploads/products'), $imageName);
-
-            return 'uploads/products/' . $imageName;
+        if ($oldImageString) {
+            $this->deleteProductImages($oldImageString);
         }
 
-        return $oldPath;
+        $imagePaths = [];
+
+        if (!file_exists(public_path('uploads/products'))) {
+            mkdir(public_path('uploads/products'), 0755, true);
+        }
+
+        foreach ($images as $image) {
+            $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+            $image->move(public_path('uploads/products'), $imageName);
+            $imagePaths[] = 'uploads/products/' . $imageName;
+        }
+
+        return implode(',', $imagePaths);
+    }
+
+    private function deleteProductImages($imageString)
+    {
+        if (!$imageString) return;
+
+        $imagePaths = explode(',', $imageString);
+
+        foreach ($imagePaths as $path) {
+            $path = trim($path);
+            if ($path && file_exists(public_path($path))) {
+                unlink(public_path($path));
+            }
+        }
     }
 }

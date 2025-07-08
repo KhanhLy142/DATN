@@ -12,19 +12,15 @@ use Illuminate\Validation\Rule;
 
 class DiscountController extends Controller
 {
-    /**
-     * Hiển thị danh sách mã giảm giá
-     */
+
     public function index(Request $request): View
     {
         $query = Discount::with('products');
 
-        // Tìm kiếm theo mã
         if ($request->filled('search')) {
             $query->where('code', 'like', '%' . $request->search . '%');
         }
 
-        // Lọc theo trạng thái
         if ($request->filled('status')) {
             switch ($request->status) {
                 case 'active':
@@ -39,9 +35,12 @@ class DiscountController extends Controller
             }
         }
 
-        // Lọc theo loại giảm giá
         if ($request->filled('type')) {
             $query->where('discount_type', $request->type);
+        }
+
+        if ($request->filled('applies_to')) {
+            $query->where('applies_to', $request->applies_to);
         }
 
         $discounts = $query->orderBy('created_at', 'desc')->paginate(15);
@@ -49,24 +48,21 @@ class DiscountController extends Controller
         return view('admin.discounts.index', compact('discounts'));
     }
 
-    /**
-     * Hiển thị form tạo mã giảm giá mới
-     */
     public function create(): View
     {
         $products = Product::orderBy('name')->get();
         return view('admin.discounts.create', compact('products'));
     }
 
-    /**
-     * Lưu mã giảm giá mới
-     */
     public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'code' => 'required|string|max:255|unique:discounts,code',
             'discount_type' => 'required|in:percent,fixed',
             'discount_value' => 'required|numeric|min:0',
+            'min_order_amount' => 'required|numeric|min:0',
+            'applies_to' => 'required|in:order,product,shipping',
+            'description' => 'nullable|string|max:255',
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'required|date|after:start_date',
             'is_active' => 'boolean',
@@ -74,9 +70,18 @@ class DiscountController extends Controller
             'products.*' => 'exists:products,id'
         ]);
 
-        // Validation cho discount_value dựa trên loại
         if ($validated['discount_type'] === 'percent' && $validated['discount_value'] > 100) {
             return back()->withErrors(['discount_value' => 'Giá trị giảm giá phần trăm không được vượt quá 100%'])
+                ->withInput();
+        }
+
+        if (in_array($validated['applies_to'], ['order', 'shipping']) && !empty($validated['products'])) {
+            return back()->withErrors(['products' => 'Mã giảm giá đơn hàng và miễn phí ship không được chọn sản phẩm cụ thể'])
+                ->withInput();
+        }
+
+        if ($validated['applies_to'] === 'product' && empty($validated['products'])) {
+            return back()->withErrors(['products' => 'Sale sản phẩm phải chọn ít nhất 1 sản phẩm'])
                 ->withInput();
         }
 
@@ -84,13 +89,15 @@ class DiscountController extends Controller
             'code' => strtoupper($validated['code']),
             'discount_type' => $validated['discount_type'],
             'discount_value' => $validated['discount_value'],
+            'min_order_amount' => $validated['min_order_amount'],
+            'applies_to' => $validated['applies_to'],
+            'description' => $validated['description'],
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
             'is_active' => $request->has('is_active')
         ]);
 
-        // Gắn sản phẩm nếu có
-        if (!empty($validated['products'])) {
+        if ($validated['applies_to'] === 'product' && !empty($validated['products'])) {
             $discount->products()->attach($validated['products']);
         }
 
@@ -98,18 +105,12 @@ class DiscountController extends Controller
             ->with('success', 'Tạo mã giảm giá thành công!');
     }
 
-    /**
-     * Hiển thị chi tiết mã giảm giá
-     */
     public function show(Discount $discount): View
     {
         $discount->load('products');
         return view('admin.discounts.show', compact('discount'));
     }
 
-    /**
-     * Hiển thị form chỉnh sửa mã giảm giá
-     */
     public function edit(Discount $discount): View
     {
         $products = Product::orderBy('name')->get();
@@ -117,9 +118,6 @@ class DiscountController extends Controller
         return view('admin.discounts.edit', compact('discount', 'products'));
     }
 
-    /**
-     * Cập nhật mã giảm giá
-     */
     public function update(Request $request, Discount $discount): RedirectResponse
     {
         $validated = $request->validate([
@@ -131,6 +129,9 @@ class DiscountController extends Controller
             ],
             'discount_type' => 'required|in:percent,fixed',
             'discount_value' => 'required|numeric|min:0',
+            'min_order_amount' => 'required|numeric|min:0',
+            'applies_to' => 'required|in:order,product,shipping',
+            'description' => 'nullable|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'is_active' => 'boolean',
@@ -138,9 +139,18 @@ class DiscountController extends Controller
             'products.*' => 'exists:products,id'
         ]);
 
-        // Validation cho discount_value dựa trên loại
         if ($validated['discount_type'] === 'percent' && $validated['discount_value'] > 100) {
             return back()->withErrors(['discount_value' => 'Giá trị giảm giá phần trăm không được vượt quá 100%'])
+                ->withInput();
+        }
+
+        if (in_array($validated['applies_to'], ['order', 'shipping']) && !empty($validated['products'])) {
+            return back()->withErrors(['products' => 'Mã giảm giá đơn hàng và miễn phí ship không được chọn sản phẩm cụ thể'])
+                ->withInput();
+        }
+
+        if ($validated['applies_to'] === 'product' && empty($validated['products'])) {
+            return back()->withErrors(['products' => 'Sale sản phẩm phải chọn ít nhất 1 sản phẩm'])
                 ->withInput();
         }
 
@@ -148,14 +158,20 @@ class DiscountController extends Controller
             'code' => strtoupper($validated['code']),
             'discount_type' => $validated['discount_type'],
             'discount_value' => $validated['discount_value'],
+            'min_order_amount' => $validated['min_order_amount'],
+            'applies_to' => $validated['applies_to'],
+            'description' => $validated['description'],
             'start_date' => $validated['start_date'],
             'end_date' => $validated['end_date'],
             'is_active' => $request->has('is_active')
         ]);
 
-        // Cập nhật quan hệ với sản phẩm
-        if (isset($validated['products'])) {
-            $discount->products()->sync($validated['products']);
+        if ($validated['applies_to'] === 'product') {
+            if (isset($validated['products'])) {
+                $discount->products()->sync($validated['products']);
+            } else {
+                $discount->products()->detach();
+            }
         } else {
             $discount->products()->detach();
         }
@@ -164,24 +180,16 @@ class DiscountController extends Controller
             ->with('success', 'Cập nhật mã giảm giá thành công!');
     }
 
-    /**
-     * Xóa mã giảm giá
-     */
     public function destroy(Discount $discount): RedirectResponse
     {
-        // Xóa quan hệ với sản phẩm trước
         $discount->products()->detach();
 
-        // Xóa mã giảm giá
         $discount->delete();
 
         return redirect()->route('admin.discounts.index')
             ->with('success', 'Xóa mã giảm giá thành công!');
     }
 
-    /**
-     * Bật/tắt trạng thái mã giảm giá
-     */
     public function toggleStatus(Discount $discount): RedirectResponse
     {
         $discount->update([
@@ -194,9 +202,6 @@ class DiscountController extends Controller
             ->with('success', "Đã {$status} mã giảm giá thành công!");
     }
 
-    /**
-     * Kiểm tra mã giảm giá (API cho frontend)
-     */
     public function checkCode(Request $request)
     {
         $request->validate([
@@ -215,8 +220,7 @@ class DiscountController extends Controller
             ]);
         }
 
-        // Kiểm tra xem mã có áp dụng cho sản phẩm này không
-        if ($request->product_id && $discount->products()->count() > 0) {
+        if ($request->product_id && $discount->applies_to === 'product') {
             $productApplicable = $discount->products()->where('product_id', $request->product_id)->exists();
 
             if (!$productApplicable) {
@@ -234,19 +238,17 @@ class DiscountController extends Controller
                 'code' => $discount->code,
                 'type' => $discount->discount_type,
                 'value' => $discount->discount_value,
+                'applies_to' => $discount->applies_to,
+                'description' => $discount->description,
                 'display_value' => $discount->display_value
             ]
         ]);
     }
 
-    /**
-     * Xuất báo cáo mã giảm giá
-     */
     public function report(Request $request): View
     {
         $query = Discount::with('products');
 
-        // Lọc theo khoảng thời gian
         if ($request->filled('from_date')) {
             $query->where('created_at', '>=', $request->from_date);
         }
@@ -256,8 +258,6 @@ class DiscountController extends Controller
         }
 
         $discounts = $query->get();
-
-        // Thống kê
         $stats = [
             'total' => $discounts->count(),
             'active' => $discounts->where('is_active', true)->count(),
@@ -266,7 +266,10 @@ class DiscountController extends Controller
             })->count(),
             'upcoming' => $discounts->filter(function($discount) {
                 return $discount->start_date > now();
-            })->count()
+            })->count(),
+            'coupons' => $discounts->where('applies_to', 'order')->count(),
+            'product_sales' => $discounts->where('applies_to', 'product')->count(),
+            'shipping_discounts' => $discounts->where('applies_to', 'shipping')->count()
         ];
 
         return view('admin.discounts.report', compact('discounts', 'stats'));

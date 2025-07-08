@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-// Bỏ Authenticatable vì authentication qua User
 
 class Staff extends Model
 {
@@ -18,22 +17,18 @@ class Staff extends Model
         'email',
         'phone',
         'role',
-        // Bỏ 'password' vì đã chuyển sang users
     ];
 
-    // Bỏ hidden password và remember_token
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
-    // Relationship với User
     public function user()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
-    // Định nghĩa các role
     public static function getRoles()
     {
         return [
@@ -44,20 +39,17 @@ class Staff extends Model
         ];
     }
 
-    // Lấy tên role tiếng Việt
     public function getRoleNameAttribute()
     {
         $roles = self::getRoles();
         return $roles[$this->role] ?? $this->role;
     }
 
-    // Scope để lọc theo role
     public function scopeByRole($query, $role)
     {
         return $query->where('role', $role);
     }
 
-    // Scope để tìm kiếm
     public function scopeSearch($query, $search)
     {
         return $query->where(function($q) use ($search) {
@@ -68,7 +60,6 @@ class Staff extends Model
         });
     }
 
-    // Helper methods
     public function getLoginEmail()
     {
         return $this->user->email ?? $this->email;
@@ -79,7 +70,6 @@ class Staff extends Model
         return $this->user !== null;
     }
 
-    // Kiểm tra quyền
     public function isAdmin()
     {
         return $this->role === 'admin';
@@ -103,5 +93,49 @@ class Staff extends Model
     public function canManageCustomers()
     {
         return in_array($this->role, ['admin', 'cskh']);
+    }
+
+    public function hasPermission($permission)
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        return \DB::table('role_permissions')
+            ->join('permissions', 'role_permissions.permission_id', '=', 'permissions.id')
+            ->where('role_permissions.role', $this->role)
+            ->where('permissions.name', $permission)
+            ->exists();
+    }
+
+    public function getPermissions()
+    {
+        if ($this->role === 'admin') {
+            return \DB::table('permissions')->pluck('name')->toArray();
+        }
+
+        return \DB::table('role_permissions')
+            ->join('permissions', 'role_permissions.permission_id', '=', 'permissions.id')
+            ->where('role_permissions.role', $this->role)
+            ->pluck('permissions.name')
+            ->toArray();
+    }
+
+    protected static function booted()
+    {
+        static::updated(function ($staff) {
+            if ($staff->user && $staff->wasChanged(['name', 'email'])) {
+                $staff->user->update([
+                    'name' => $staff->name,
+                    'email' => $staff->email,
+                ]);
+            }
+        });
+
+        static::deleting(function ($staff) {
+            if ($staff->user) {
+                $staff->user->delete();
+            }
+        });
     }
 }

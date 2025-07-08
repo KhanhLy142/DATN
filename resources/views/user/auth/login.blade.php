@@ -9,7 +9,6 @@
                 <div class="card shadow-sm p-4 rounded-4">
                     <h2 class="text-center mb-4 text-pink fw-bold">Đăng nhập tài khoản</h2>
 
-                    {{-- Hiển thị lỗi nếu có --}}
                     @if ($errors->any())
                         <div class="alert alert-danger">
                             <ul class="mb-0">
@@ -20,7 +19,6 @@
                         </div>
                     @endif
 
-                    {{-- Hiển thị thông báo lỗi đăng nhập --}}
                     @if (session('error'))
                         <div class="alert alert-danger">
                             {{ session('error') }}
@@ -62,7 +60,6 @@
                             <p class="text-muted mb-1">Chưa có tài khoản?
                                 <a href="{{ route('register') }}" class="text-pink fw-semibold">Đăng ký ngay</a>
                             </p>
-                            <p class="mb-0"><a href="#" class="text-decoration-none text-muted">Quên mật khẩu?</a></p>
                         </div>
                     </form>
                 </div>
@@ -70,3 +67,4 @@
         </div>
     </div>
 @endsection
+

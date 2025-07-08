@@ -10,7 +10,6 @@
                     <h4 class="fw-bold text-center text-pink fs-2 mb-4">Chi tiết nhân viên</h4>
                     <div class="card-body">
                         <div class="row">
-                            <!-- Thông tin cơ bản -->
                             <div class="col-md-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
@@ -72,20 +71,10 @@
                                                 </span>
                                             </div>
                                         </div>
-
-                                        <div class="row mb-3">
-                                            <div class="col-sm-4">
-                                                <strong>Trạng thái:</strong>
-                                            </div>
-                                            <div class="col-sm-8">
-                                                <span class="badge bg-success fs-6">Hoạt động</span>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Thông tin thời gian -->
                             <div class="col-md-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
@@ -114,7 +103,6 @@
                             </div>
                         </div>
 
-                        <!-- Thông tin bổ sung - hiển thị ngang -->
                         <div class="row">
                             <div class="col-12">
                                 <div class="card mb-4">
@@ -124,14 +112,13 @@
                                     <div class="card-body">
                                         <div class="alert alert-info">
                                             <i class="bi bi-info-circle"></i>
-                                            Nhân viên này đã được tạo vào {{ $staff->created_at->format('d/m/Y') }} và đang hoạt động bình thường.
+                                            Nhân viên này đã được tạo vào {{ $staff->created_at->format('d/m/Y') }}.
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Nút quay lại ở dưới -->
                         <div class="d-flex justify-content-end mt-4 pt-3 border-top">
                             <a href="{{ route('admin.staffs.index') }}" class="btn btn-secondary">
                                 Quay lại

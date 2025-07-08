@@ -7,151 +7,86 @@ use App\Models\Shipping;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ShippingController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
-        $query = Shipping::with('order');
+        $query = Shipping::with(['order.customer', 'order.payment']);
 
-        // Tìm kiếm
         if ($request->filled('search')) {
-            $query->search($request->search);
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('order_id', 'like', "%{$search}%")
+                    ->orWhere('shipping_address', 'like', "%{$search}%")
+                    ->orWhere('tracking_code', 'like', "%{$search}%");
+            });
         }
 
-        // Lọc theo phương thức vận chuyển
+
         if ($request->filled('shipping_method')) {
-            $query->byMethod($request->shipping_method);
+            $query->where('shipping_method', $request->shipping_method);
         }
 
-        // Lọc theo trạng thái
         if ($request->filled('shipping_status')) {
             $query->where('shipping_status', $request->shipping_status);
         }
 
-        // Lọc theo tỉnh/thành phố
         if ($request->filled('province')) {
-            $query->byProvince($request->province);
+            $query->where('province_name', 'like', "%{$request->province}%");
         }
 
-        // Sắp xếp mới nhất trước
+
+        if ($request->filled('need_payment_confirmation') && $request->need_payment_confirmation == '1') {
+            $query->whereHas('order.payment', function($q) {
+                $q->whereIn('payment_method', ['vnpay', 'bank_transfer'])
+                    ->where('payment_status', 'pending');
+            });
+        }
+
         $query->orderBy('created_at', 'desc');
 
-        // Phân trang
+
         $shippings = $query->paginate(15)->withQueryString();
 
-        // Thống kê
-        $stats = Shipping::getStatistics();
+        $stats = [
+            'pending' => Shipping::where('shipping_status', 'pending')->count(),
+            'confirmed' => Shipping::where('shipping_status', 'confirmed')->count(),
+            'shipping' => Shipping::where('shipping_status', 'shipping')->count(),
+            'delivered' => Shipping::where('shipping_status', 'delivered')->count(),
+        ];
+
+        $stats['need_payment_confirmation'] = Shipping::whereHas('order.payment', function($q) {
+            $q->whereIn('payment_method', ['vnpay', 'bank_transfer'])
+                ->where('payment_status', 'pending');
+        })->count();
 
         return view('admin.shippings.index', compact('shippings', 'stats'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        // Lấy danh sách đơn hàng chưa có thông tin vận chuyển
-        $orders = Order::whereDoesntHave('shipping')
-            ->where('status', '!=', 'cancelled')
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        return view('admin.shippings.create', compact('orders'));
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'order_id' => 'required|exists:orders,id|unique:shippings,order_id',
-            'shipping_address' => 'required|string|max:1000',
-            'shipping_method' => 'required|in:standard,express',
-            'shipping_status' => 'required|in:pending,shipped,delivered',
-            'province' => 'nullable|string|max:255',
-            'shipping_fee' => 'nullable|numeric|min:0',
-            'shipping_note' => 'nullable|string|max:1000',
-            'tracking_code' => 'nullable|string|max:100|unique:shippings,tracking_code'
-        ], [
-            'order_id.required' => 'Vui lòng chọn đơn hàng',
-            'order_id.unique' => 'Đơn hàng này đã có thông tin vận chuyển',
-            'shipping_address.required' => 'Vui lòng nhập địa chỉ giao hàng',
-            'shipping_method.required' => 'Vui lòng chọn phương thức vận chuyển',
-            'shipping_status.required' => 'Vui lòng chọn trạng thái vận chuyển',
-            'tracking_code.unique' => 'Mã vận đơn đã tồn tại'
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $shipping = Shipping::create([
-                'order_id' => $request->order_id,
-                'shipping_address' => $request->shipping_address,
-                'shipping_method' => $request->shipping_method,
-                'shipping_status' => $request->shipping_status,
-                'province' => $request->province,
-                'shipping_fee' => $request->shipping_fee ?? 0,
-                'shipping_note' => $request->shipping_note,
-                'tracking_code' => $request->tracking_code
-            ]);
-
-            // Cập nhật trạng thái đơn hàng
-            $order = Order::find($request->order_id);
-            if ($order && $request->shipping_status === 'shipped') {
-                $order->update(['status' => 'shipped']);
-            } elseif ($order && $request->shipping_status === 'delivered') {
-                $order->update(['status' => 'completed']);
-            }
-
-            DB::commit();
-
-            return redirect()->route('admin.shippings.index')
-                ->with('success', 'Tạo thông tin vận chuyển thành công!');
-
-        } catch (\Exception $e) {
-            DB::rollback();
-
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Display the specified resource.
-     */
     public function show(Shipping $shipping)
     {
-        $shipping->load('order');
+        $shipping->load(['order.customer', 'order.payment']);
 
         return view('admin.shippings.show', compact('shipping'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+
     public function edit(Shipping $shipping)
     {
-        $shipping->load('order');
+        $shipping->load(['order.customer', 'order.payment']);
 
         return view('admin.shippings.edit', compact('shipping'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Shipping $shipping)
     {
         $request->validate([
             'shipping_address' => 'required|string|max:1000',
             'shipping_method' => 'required|in:standard,express',
-            'shipping_status' => 'required|in:pending,shipped,delivered',
-            'province' => 'nullable|string|max:255',
+            'shipping_status' => 'required|in:pending,confirmed,shipping,delivered',
+            'province_name' => 'nullable|string|max:255',
             'shipping_fee' => 'nullable|numeric|min:0',
             'shipping_note' => 'nullable|string|max:1000',
             'tracking_code' => 'nullable|string|max:100|unique:shippings,tracking_code,' . $shipping->id
@@ -165,116 +100,252 @@ class ShippingController extends Controller
         try {
             DB::beginTransaction();
 
-            $oldStatus = $shipping->shipping_status;
+            $this->validateShippingUpdate($shipping, $request->shipping_status);
 
-            $shipping->update([
+            $oldStatus = $shipping->shipping_status;
+            Log::info('Updating shipping status from ' . $oldStatus . ' to ' . $request->shipping_status);
+
+            $updateData = [
                 'shipping_address' => $request->shipping_address,
                 'shipping_method' => $request->shipping_method,
                 'shipping_status' => $request->shipping_status,
-                'province' => $request->province,
                 'shipping_fee' => $request->shipping_fee ?? 0,
                 'shipping_note' => $request->shipping_note,
                 'tracking_code' => $request->tracking_code
-            ]);
+            ];
 
-            // Cập nhật trạng thái đơn hàng nếu thay đổi trạng thái vận chuyển
-            if ($oldStatus !== $request->shipping_status && $shipping->order) {
-                if ($request->shipping_status === 'shipped') {
-                    $shipping->order->update(['status' => 'shipped']);
-                } elseif ($request->shipping_status === 'delivered') {
-                    $shipping->order->update(['status' => 'completed']);
-                }
+            if ($request->filled('province_name')) {
+                $updateData['province_name'] = $request->province_name;
+            }
+
+            $shipping->update($updateData);
+            Log::info('Shipping updated successfully');
+
+            if ($oldStatus !== $request->shipping_status) {
+                $this->updateOrderStatusBasedOnShipping($shipping, $request->shipping_status);
             }
 
             DB::commit();
 
-            // Redirect về trang danh sách thay vì trang chi tiết
+            $successMessage = 'Cập nhật thông tin vận chuyển thành công!';
+            if ($request->shipping_status === 'delivered' && $shipping->order && $shipping->order->payment && $shipping->order->payment->payment_method == 'cod') {
+                $successMessage .= ' Đơn hàng COD đã được tự động hoàn thành.';
+            }
+
             return redirect()->route('admin.shippings.index')
-                ->with('success', 'Cập nhật thông tin vận chuyển thành công!');
+                ->with('success', $successMessage);
 
         } catch (\Exception $e) {
             DB::rollback();
-
+            Log::error('Error updating shipping: ' . $e->getMessage());
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Shipping $shipping)
+    private function validateShippingUpdate($shipping, $newShippingStatus)
+    {
+        if (in_array($newShippingStatus, ['confirmed', 'shipping', 'delivered'])) {
+            $order = $shipping->order;
+
+            if ($order && $order->payment) {
+                if (in_array($order->payment->payment_method, ['vnpay', 'bank_transfer'])) {
+                    $order->payment->refresh();
+
+                    if ($order->payment->payment_status !== 'completed') {
+                        $paymentMethodName = $order->payment->payment_method === 'vnpay' ? 'VNPay' : 'Chuyển khoản ngân hàng';
+
+                        throw new \Exception("❌ Không thể cập nhật trạng thái vận chuyển!\n\n" .
+                            "🔍 Chi tiết: Đơn hàng này sử dụng phương thức thanh toán {$paymentMethodName} " .
+                            "nhưng chưa được thanh toán (Trạng thái: {$order->payment->payment_status}).\n\n" .
+                            "✅ Vui lòng xác nhận thanh toán trước khi tiến hành vận chuyển.");
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private function updateOrderStatusBasedOnShipping($shipping, $newShippingStatus)
+    {
+        if (!$shipping->order) {
+            Log::warning('No order found for shipping ID: ' . $shipping->id);
+            return;
+        }
+
+        $order = $shipping->order;
+        $oldOrderStatus = $order->status;
+
+        Log::info('Processing order status update for order ID: ' . $order->id);
+        Log::info('Current order status: ' . $oldOrderStatus);
+        Log::info('New shipping status: ' . $newShippingStatus);
+
+        switch ($newShippingStatus) {
+            case 'confirmed':
+                if ($order->status == 'pending') {
+                    $order->updateQuietly(['status' => 'processing']);
+                    Log::info('Order status updated from pending to processing');
+                }
+                break;
+
+            case 'shipping':
+                if (in_array($order->status, ['pending', 'processing'])) {
+                    $order->updateQuietly(['status' => 'shipped']);
+                    Log::info('Order status updated to shipped');
+                }
+                break;
+
+            case 'delivered':
+
+                $shouldCompleteOrder = false;
+
+                if ($order->payment) {
+                    if ($order->payment->payment_method === 'cod') {
+                        $order->payment->updateQuietly([
+                            'payment_status' => 'completed',
+                            'payment_note' => 'Tự động hoàn thành thanh toán COD khi giao hàng - ' . now()->format('d/m/Y H:i')
+                        ]);
+                        Log::info('COD payment auto-completed');
+                        $shouldCompleteOrder = true;
+
+                    } elseif (in_array($order->payment->payment_method, ['vnpay', 'bank_transfer'])) {
+                        if ($order->payment->payment_status === 'completed') {
+                            $shouldCompleteOrder = true;
+                            Log::info('VNPay/Bank Transfer already paid, completing order');
+                        } else {
+                            Log::info('VNPay/Bank Transfer not paid yet, order remains as shipped');
+                        }
+                    }
+                } else {
+                    $shouldCompleteOrder = true;
+                }
+
+                if ($shouldCompleteOrder) {
+                    $order->updateQuietly(['status' => 'completed']);
+                    Log::info('Order status updated to completed');
+                } else {
+                    $order->updateQuietly(['status' => 'shipped']);
+                    Log::info('Order status updated to shipped (payment pending)');
+                }
+                break;
+        }
+
+        $order->refresh();
+        Log::info('Final order status: ' . $order->status);
+    }
+
+    public function markAsShipped(Request $request, Shipping $shipping)
     {
         try {
             DB::beginTransaction();
 
-            // Kiểm tra xem có thể xóa không
-            if ($shipping->shipping_status === 'delivered') {
-                return redirect()->back()
-                    ->with('error', 'Không thể xóa thông tin vận chuyển đã hoàn thành!');
+            $newStatus = '';
+
+            switch ($shipping->shipping_status) {
+                case 'pending':
+                    $newStatus = 'confirmed';
+                    break;
+                case 'confirmed':
+                    $newStatus = 'shipping';
+                    if (empty($shipping->tracking_code)) {
+                        $shipping->update([
+                            'tracking_code' => 'TRK' . strtoupper(uniqid())
+                        ]);
+                    }
+                    break;
+                default:
+                    return redirect()->back()
+                        ->with('error', 'Không thể chuyển trạng thái từ ' . $shipping->shipping_status);
             }
 
-            $shipping->delete();
+            $this->validateShippingUpdate($shipping, $newStatus);
+
+            $shipping->update(['shipping_status' => $newStatus]);
+            Log::info('Shipping status updated to: ' . $newStatus);
+
+            $this->updateOrderStatusBasedOnShipping($shipping, $newStatus);
 
             DB::commit();
 
-            return redirect()->route('admin.shippings.index')
-                ->with('success', 'Xóa thông tin vận chuyển thành công!');
+            $statusText = [
+                'confirmed' => 'đã xác nhận',
+                'shipping' => 'đang giao hàng'
+            ];
+
+            return redirect()->back()
+                ->with('success', 'Đã cập nhật trạng thái vận chuyển thành "' . ($statusText[$newStatus] ?? $newStatus) . '"');
 
         } catch (\Exception $e) {
             DB::rollback();
-
+            Log::error('Error in markAsShipped: ' . $e->getMessage());
             return redirect()->back()
                 ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Đánh dấu đang giao hàng
-     */
-    public function markAsShipped(Request $request, Shipping $shipping)
-    {
-        $request->validate([
-            'tracking_code' => 'nullable|string|max:100|unique:shippings,tracking_code,' . $shipping->id
-        ]);
-
-        try {
-            $shipping->markAsShipped($request->tracking_code);
-
-            return redirect()->back()
-                ->with('success', 'Đã cập nhật trạng thái đang giao hàng!');
-
-        } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Đánh dấu đã giao hàng
-     */
     public function markAsDelivered(Shipping $shipping)
     {
+        if ($shipping->shipping_status !== 'shipping') {
+            return redirect()->back()
+                ->with('error', 'Chỉ có thể đánh dấu đã giao cho đơn hàng đang được vận chuyển!');
+        }
+
         try {
-            $shipping->markAsDelivered();
+            DB::beginTransaction();
+
+            Log::info('Starting markAsDelivered for shipping ID: ' . $shipping->id);
+
+            try {
+                $this->validateShippingUpdate($shipping, 'delivered');
+            } catch (\Exception $e) {
+                Log::warning('Validation warning for delivered status: ' . $e->getMessage());
+            }
+
+            $shipping->update(['shipping_status' => 'delivered']);
+            Log::info('Shipping status updated to delivered');
+
+            $this->updateOrderStatusBasedOnShipping($shipping, 'delivered');
+
+            DB::commit();
+            Log::info('Transaction committed successfully');
+
+            $shipping->refresh();
+            $order = $shipping->order;
+            $order->refresh();
+
+            Log::info('Final check - Order status: ' . $order->status);
+            if ($order->payment) {
+                $order->payment->refresh();
+                Log::info('Final check - Payment status: ' . $order->payment->payment_status);
+            }
+
+            $successMessage = 'Đã đánh dấu giao hàng thành công!';
+            if ($order->payment && $order->payment->payment_method == 'cod') {
+                $successMessage .= ' Đơn hàng COD đã được tự động hoàn thành.';
+            } elseif ($order->status === 'completed') {
+                $successMessage .= ' Đơn hàng đã hoàn thành.';
+            } elseif ($order->payment && in_array($order->payment->payment_method, ['vnpay', 'bank_transfer']) && $order->payment->payment_status !== 'completed') {
+                $successMessage .= ' ⚠️ Lưu ý: Đơn hàng chưa thanh toán, trạng thái vẫn là "Đang giao hàng".';
+            }
 
             return redirect()->back()
-                ->with('success', 'Đã cập nhật trạng thái giao hàng thành công!');
+                ->with('success', $successMessage);
 
         } catch (\Exception $e) {
+            DB::rollback();
+            Log::error('Error in markAsDelivered: ' . $e->getMessage());
             return redirect()->back()
                 ->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Tạo mã vận đơn tự động
-     */
     public function generateTrackingCode(Shipping $shipping)
     {
         try {
-            $trackingCode = $shipping->generateTrackingCode();
+            $trackingCode = 'TRK' . strtoupper(uniqid());
+            $shipping->update(['tracking_code' => $trackingCode]);
 
             return response()->json([
                 'success' => true,
@@ -290,25 +361,61 @@ class ShippingController extends Controller
         }
     }
 
-    /**
-     * Xuất báo cáo vận chuyển
-     */
-    public function export(Request $request)
+    public function checkPaymentStatus(Shipping $shipping)
     {
-        // Logic xuất Excel/PDF có thể thêm sau
-        return redirect()->back()
-            ->with('info', 'Chức năng xuất báo cáo đang được phát triển!');
+        try {
+            $order = $shipping->order;
+
+            if (!$order || !$order->payment) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không tìm thấy thông tin thanh toán'
+                ]);
+            }
+
+            $payment = $order->payment;
+            $payment->refresh();
+
+            $canShip = true;
+            $message = 'Đơn hàng có thể vận chuyển';
+
+            if (in_array($payment->payment_method, ['vnpay', 'bank_transfer'])) {
+                if ($payment->payment_status !== 'completed') {
+                    $canShip = false;
+                    $message = 'Đơn hàng chưa được thanh toán, không thể vận chuyển';
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'can_ship' => $canShip,
+                'message' => $message,
+                'payment_status' => $payment->payment_status,
+                'payment_method' => $payment->payment_method
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
-    /**
-     * Thống kê vận chuyển
-     */
     public function statistics()
     {
-        $stats = Shipping::getStatistics();
-        $methodStats = Shipping::getMethodStatistics();
+        $stats = [
+            'pending' => Shipping::where('shipping_status', 'pending')->count(),
+            'confirmed' => Shipping::where('shipping_status', 'confirmed')->count(),
+            'shipping' => Shipping::where('shipping_status', 'shipping')->count(),
+            'delivered' => Shipping::where('shipping_status', 'delivered')->count(),
+        ];
 
-        // Thống kê theo tháng
+        $methodStats = [
+            'standard' => Shipping::where('shipping_method', 'standard')->count(),
+            'express' => Shipping::where('shipping_method', 'express')->count(),
+        ];
+
         $monthlyStats = Shipping::selectRaw('
                 YEAR(created_at) as year,
                 MONTH(created_at) as month,
@@ -323,12 +430,12 @@ class ShippingController extends Controller
         return view('admin.shippings.statistics', compact('stats', 'methodStats', 'monthlyStats'));
     }
 
-    /**
-     * API lấy thông tin vận chuyển theo đơn hàng
-     */
+
     public function getByOrder($orderId)
     {
-        $shipping = Shipping::where('order_id', $orderId)->first();
+        $shipping = Shipping::with(['order.payment'])
+            ->where('order_id', $orderId)
+            ->first();
 
         if (!$shipping) {
             return response()->json([

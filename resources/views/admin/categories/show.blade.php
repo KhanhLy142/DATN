@@ -72,26 +72,6 @@
                     </div>
                 @endif
 
-                {{-- Hiển thị sản phẩm nếu có --}}
-                {{-- @if($category->products->count() > 0)
-                    <div class="mb-3">
-                        <p class="mb-2">
-                            <i class="bi bi-box-seam me-2 text-success"></i>
-                            <strong>Sản phẩm thuộc danh mục ({{ $category->products->count() }}):</strong>
-                        </p>
-                        <div class="mt-2">
-                            @foreach($category->products->take(5) as $product)
-                                <span class="badge bg-secondary me-2 mb-2">
-                                    <i class="bi bi-box me-1"></i>{{ $product->name }}
-                                </span>
-                            @endforeach
-                            @if($category->products->count() > 5)
-                                <span class="text-muted">... và {{ $category->products->count() - 5 }} sản phẩm khác</span>
-                            @endif
-                        </div>
-                    </div>
-                @endif --}}
-
                 <div class="d-flex justify-content-end mt-4 pt-3 border-top">
                     <a href="{{ route('admin.categories.index') }}" class="btn btn-secondary">
                         Quay lại

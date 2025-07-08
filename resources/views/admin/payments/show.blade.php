@@ -39,8 +39,11 @@
                                 @case('cod')
                                     <span class="badge bg-warning text-dark">COD - Thanh toán khi nhận hàng</span>
                                     @break
-                                @case('momo')
-                                    <span class="badge bg-primary">MoMo - Ví điện tử</span>
+                                @case('vnpay')
+                                    <span class="badge bg-primary">VNPay - Cổng thanh toán</span>
+                                    @break
+                                @case('bank_transfer')
+                                    <span class="badge bg-info">Chuyển khoản ngân hàng</span>
                                     @break
                                 @default
                                     <span class="badge bg-secondary">{{ ucfirst($payment->payment_method) }}</span>
@@ -61,6 +64,9 @@
                                 @case('failed')
                                     <span class="badge bg-danger">Thất bại</span>
                                     @break
+                                @case('refunded')
+                                    <span class="badge bg-secondary">Đã hoàn tiền</span>
+                                    @break
                                 @default
                                     <span class="badge bg-secondary">{{ ucfirst($payment->payment_status) }}</span>
                             @endswitch
@@ -68,11 +74,11 @@
                     </div>
                 </div>
 
-                @if($payment->momo_transaction_id)
+                @if($payment->vnpay_transaction_id)
                     <p class="card-text">
                         <i class="bi bi-qr-code me-2 text-info"></i>
-                        <strong>Mã giao dịch MoMo:</strong>
-                        <span class="badge bg-light text-dark border">{{ $payment->momo_transaction_id }}</span>
+                        <strong>Mã giao dịch VNPay:</strong>
+                        <span class="badge bg-light text-dark border">{{ $payment->vnpay_transaction_id }}</span>
                     </p>
                 @endif
 
@@ -98,7 +104,6 @@
                     </div>
                 </div>
 
-                {{-- Thông tin đơn hàng liên quan --}}
                 @if($payment->order)
                     <div class="mb-3">
                         <p class="mb-2">

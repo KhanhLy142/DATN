@@ -42,20 +42,39 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <p class="card-text">
+                            <i class="bi bi-cart-check me-2 text-warning"></i>
+                            <strong>Đơn hàng tối thiểu:</strong>
+                            @if($discount->min_order_amount > 0)
+                                <span class="badge bg-warning text-dark">
+                                    {{ number_format($discount->min_order_amount, 0, ',', '.') }}đ
+                                </span>
+                            @else
+                                <span class="badge bg-success">
+                                    <i class="bi bi-infinity"></i> Không giới hạn
+                                </span>
+                            @endif
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="card-text">
                             @php
-                                $statusClass = $discount->status_class ?? 'secondary';
+                                $statusClass = '';
                                 $statusIcon = '';
                                 switch($discount->status) {
                                     case 'Đang hoạt động':
+                                        $statusClass = 'success';
                                         $statusIcon = 'play-circle';
                                         break;
                                     case 'Chưa bắt đầu':
+                                        $statusClass = 'warning';
                                         $statusIcon = 'clock';
                                         break;
                                     case 'Đã hết hạn':
+                                        $statusClass = 'danger';
                                         $statusIcon = 'x-circle';
                                         break;
                                     default:
+                                        $statusClass = 'secondary';
                                         $statusIcon = 'pause-circle';
                                 }
                             @endphp
@@ -66,6 +85,9 @@
                             </span>
                         </p>
                     </div>
+                </div>
+
+                <div class="row mb-3">
                     <div class="col-md-6">
                         <p class="card-text">
                             <i class="bi bi-toggle-{{ $discount->is_active ? 'on' : 'off' }} me-2 text-{{ $discount->is_active ? 'success' : 'danger' }}"></i>
@@ -74,6 +96,8 @@
                                 {{ $discount->is_active ? 'Có' : 'Không' }}
                             </span>
                         </p>
+                    </div>
+                    <div class="col-md-6">
                     </div>
                 </div>
 
@@ -107,7 +131,29 @@
                     </div>
                 </div>
 
-                <!-- Sản phẩm áp dụng -->
+                <div class="mb-3">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="bi bi-info-circle"></i> Điều kiện áp dụng mã giảm giá
+                        </h6>
+                        <p class="mb-1">
+                            <strong>Giá trị giảm:</strong> {{ $discount->display_value }}
+                        </p>
+                        <p class="mb-1">
+                            <strong>Đơn hàng tối thiểu:</strong>
+                            @if($discount->min_order_amount > 0)
+                                {{ number_format($discount->min_order_amount, 0, ',', '.') }}đ
+                            @else
+                                Không giới hạn
+                            @endif
+                        </p>
+                        <p class="mb-0">
+                            <strong>Thời gian hiệu lực:</strong>
+                            {{ $discount->start_date->format('d/m/Y') }} - {{ $discount->end_date->format('d/m/Y') }}
+                        </p>
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <p class="mb-2">
                         <i class="bi bi-box-seam me-2 text-info"></i>
@@ -139,7 +185,6 @@
                     @endif
                 </div>
 
-                <!-- Thao tác nhanh -->
                 <div class="border-top pt-3 mt-4">
                     <div class="row">
                         <div class="col-md-8">
@@ -175,13 +220,12 @@
 
                 <div class="d-flex justify-content-end mt-4 pt-3 border-top">
                     <a href="{{ route('admin.discounts.index') }}" class="btn btn-secondary">
-                         Quay lại
+                        Quay lại
                     </a>
                 </div>
             </div>
         </div>
 
-        <!-- Bảng chi tiết sản phẩm áp dụng (nếu có) -->
         @if($discount->products->count() > 0)
             <div class="card shadow-sm border-0 rounded-4 mt-4">
                 <div class="card-header bg-light">
@@ -262,4 +306,24 @@
             </div>
         @endif
     </div>
+
+    <script>
+        function copyDiscountCode() {
+            const code = document.querySelector('[data-discount-code]').getAttribute('data-discount-code');
+            navigator.clipboard.writeText(code).then(function() {
+                // Show success message
+                const btn = event.target.closest('button');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-check"></i> Đã sao chép';
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-success');
+
+                setTimeout(function() {
+                    btn.innerHTML = originalText;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-primary');
+                }, 2000);
+            });
+        }
+    </script>
 @endsection

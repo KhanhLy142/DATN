@@ -19,13 +19,12 @@
 @section('content')
     <div class="container py-5">
         <div class="row">
-            <!-- Sidebar Menu -->
             <div class="col-lg-3 mb-4">
                 <div class="card shadow-sm rounded-4">
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
-                            <h6 class="mt-2 mb-0 fw-bold">{{ Auth::user()->name ?? 'Nguyễn Văn A' }}</h6>
-                            <small class="text-muted">Thành viên từ {{ Auth::user()->created_at ? Auth::user()->created_at->format('m/Y') : '01/2024' }}</small>
+                            <h6 class="mt-2 mb-0 fw-bold">{{ Auth::guard('customer')->user()->name ?? 'Nguyễn Văn A' }}</h6>
+                            <small class="text-muted">Thành viên từ {{ Auth::guard('customer')->user()->created_at ? Auth::guard('customer')->user()->created_at->format('m/Y') : '01/2024' }}</small>
                         </div>
 
                         <div class="list-group list-group-flush">
@@ -41,18 +40,20 @@
                                 <i class="bi bi-shield-lock me-2"></i>
                                 Đổi mật khẩu
                             </a>
-                            <a href="#" class="list-group-item list-group-item-action border-0 rounded-3 text-danger">
-                                <i class="bi bi-box-arrow-right me-2"></i>
-                                Đăng xuất
-                            </a>
+                            <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="list-group-item list-group-item-action border-0 rounded-3 text-danger w-100 text-start"
+                                        style="background: none; border: none;">
+                                    <i class="bi bi-box-arrow-right me-2"></i>
+                                    Đăng xuất
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Main Content -->
             <div class="col-lg-9">
-                <!-- Header -->
                 <div class="card shadow-sm rounded-4 p-4 mb-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -70,9 +71,7 @@
                     </div>
                 </div>
 
-                <!-- Form đổi mật khẩu -->
                 <div class="card shadow-sm rounded-4 p-4 mb-4">
-                    <!-- Hiển thị thông báo -->
                     @if (session('success'))
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             <i class="bi bi-check-circle-fill me-2"></i>
@@ -149,7 +148,6 @@
                                         @enderror
                                     </div>
 
-                                    <!-- Password strength indicator -->
                                     <div class="mt-2">
                                         <div class="progress" style="height: 5px;">
                                             <div class="progress-bar" id="password-strength" role="progressbar" style="width: 0%"></div>
@@ -192,7 +190,6 @@
                     </form>
                 </div>
 
-                <!-- Hướng dẫn bảo mật -->
                 <div class="card shadow-sm rounded-4 p-4">
                     <h5 class="fw-bold mb-3">
                         <i class="bi bi-shield-check me-2 text-success"></i>
@@ -248,69 +245,3 @@
     </div>
 @endsection
 
-@push('styles')
-    <style>
-        .list-group-item.active {
-            background-color: var(--bs-pink);
-            border-color: var(--bs-pink);
-        }
-
-        .input-group-text {
-            min-width: 45px;
-            justify-content: center;
-        }
-
-        .form-control:focus {
-            border-color: #e91e63;
-            box-shadow: 0 0 0 0.2rem rgba(233, 30, 99, 0.25);
-        }
-
-        .password-toggle {
-            cursor: pointer;
-        }
-
-        .password-toggle:hover {
-            background-color: #f8f9fa;
-        }
-
-        #submit-btn {
-            min-width: 160px;
-            position: relative;
-        }
-
-        #submit-btn:disabled {
-            opacity: 0.6;
-        }
-
-        .loading-spinner {
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid transparent;
-            border-top: 2px solid currentColor;
-            border-radius: 50%;
-            display: inline-block;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .progress-bar {
-            transition: all 0.3s ease;
-        }
-
-        .form-control, .input-group-text {
-            border-radius: 0.5rem;
-        }
-
-        .input-group .form-control:not(:first-child) {
-            border-left: 0;
-        }
-
-        .input-group .form-control:not(:last-child) {
-            border-right: 0;
-        }
-    </style>
-@endpush

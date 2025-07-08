@@ -12,19 +12,14 @@ use Illuminate\Validation\Rule;
 
 class StaffController extends Controller
 {
-    /**
-     * Display a listing of the resource - THÊM METHOD NÀY
-     */
     public function index(Request $request)
     {
         $query = Staff::with('user')->orderBy('created_at', 'desc');
 
-        // Tìm kiếm
         if ($request->filled('search')) {
             $query->search($request->search);
         }
 
-        // Lọc theo role
         if ($request->filled('role')) {
             $query->byRole($request->role);
         }
@@ -35,18 +30,12 @@ class StaffController extends Controller
         return view('admin.staffs.index', compact('staffs', 'roles'));
     }
 
-    /**
-     * Show the form for creating a new resource - THÊM METHOD NÀY
-     */
     public function create()
     {
         $roles = Staff::getRoles();
         return view('admin.staffs.create', compact('roles'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -71,19 +60,18 @@ class StaffController extends Controller
 
             $hashedPassword = Hash::make($request->password);
 
-            // 1. Tạo User với password
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
-                'password' => $hashedPassword, // Lưu password ở users
+                'password' => $hashedPassword,
+                'user_type' => 'staff',
             ]);
 
-            // 2. Tạo Staff với cùng password (đồng bộ)
             Staff::create([
                 'user_id' => $user->id,
                 'name' => $request->name,
                 'email' => $request->email,
-                'password' => $hashedPassword, // Lưu password ở staffs (đồng bộ)
+                'password' => $hashedPassword,
                 'phone' => $request->phone,
                 'role' => $request->role,
             ]);
@@ -101,18 +89,12 @@ class StaffController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource - THÊM METHOD NÀY
-     */
     public function show(Staff $staff)
     {
         $staff->load('user');
         return view('admin.staffs.show', compact('staff'));
     }
 
-    /**
-     * Show the form for editing the specified resource - THÊM METHOD NÀY
-     */
     public function edit(Staff $staff)
     {
         $staff->load('user');
@@ -120,9 +102,6 @@ class StaffController extends Controller
         return view('admin.staffs.edit', compact('staff', 'roles'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Staff $staff)
     {
         $request->validate([
@@ -134,7 +113,7 @@ class StaffController extends Controller
                 'max:255',
                 Rule::unique('users', 'email')->ignore($staff->user_id),
             ],
-            'password' => 'nullable|string|min:8|confirmed', // Không bắt buộc khi update
+            'password' => 'nullable|string|min:8|confirmed',
             'phone' => 'nullable|string|max:20',
             'role' => 'required|in:admin,sales,warehouse,cskh',
         ], [
@@ -150,7 +129,6 @@ class StaffController extends Controller
         try {
             DB::beginTransaction();
 
-            // Chuẩn bị data để update
             $userData = [
                 'name' => $request->name,
                 'email' => $request->email,
@@ -163,17 +141,14 @@ class StaffController extends Controller
                 'role' => $request->role,
             ];
 
-            // Nếu có password mới, hash và cập nhật cả 2 bảng
             if ($request->filled('password')) {
                 $hashedPassword = Hash::make($request->password);
                 $userData['password'] = $hashedPassword;
-                $staffData['password'] = $hashedPassword; // Đồng bộ password
+                $staffData['password'] = $hashedPassword;
             }
 
-            // 1. Cập nhật User
             $staff->user->update($userData);
 
-            // 2. Cập nhật Staff
             $staff->update($staffData);
 
             DB::commit();
@@ -189,9 +164,6 @@ class StaffController extends Controller
         }
     }
 
-    /**
-     * Remove the specified resource from storage - THÊM METHOD NÀY
-     */
     public function destroy(Staff $staff)
     {
         try {
@@ -199,10 +171,8 @@ class StaffController extends Controller
 
             $user = $staff->user;
 
-            // Xóa Staff trước
             $staff->delete();
 
-            // Xóa User sau
             if ($user) {
                 $user->delete();
             }
@@ -219,12 +189,8 @@ class StaffController extends Controller
         }
     }
 
-    /**
-     * Toggle staff status - THÊM METHOD NÀY
-     */
     public function toggleStatus(Staff $staff)
     {
-        // Có thể thêm logic để toggle trạng thái hoạt động
         return redirect()->route('admin.staffs.index')
             ->with('success', 'Cập nhật trạng thái thành công!');
     }

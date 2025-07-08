@@ -7,64 +7,41 @@ use App\Models\Chat;
 use App\Models\ChatMessage;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 
 class ChatController extends Controller
 {
-    /**
-     * Hiển thị danh sách tất cả chat sessions
-     */
-    public function index()
+
+    public function index(Request $request)
     {
-        $chats = Chat::with(['user', 'lastMessage'])
-            ->orderBy('updated_at', 'desc')
-            ->paginate(20);
+        $query = Chat::with(['customer', 'messages']);
+
+        if ($request->filled('status')) {
+            $query->where('chat_status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $query->whereHas('messages', function($q) use ($searchTerm) {
+                $q->where('message', 'LIKE', "%{$searchTerm}%");
+            });
+        }
+
+        $chats = $query->orderBy('updated_at', 'desc')->paginate(20);
 
         return view('admin.chats.index', compact('chats'));
     }
 
-    /**
-     * Tạo chat session mới cho user
-     */
-    public function create()
-    {
-        return view('admin.chats.create');
-    }
 
-    /**
-     * Lưu chat session mới
-     */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'user_id' => 'required|exists:users,id',
-        ]);
-
-        $chat = Chat::create([
-            'user_id' => $request->user_id,
-            'chat_status' => 'active',
-        ]);
-
-        return redirect()->route('chats.show', $chat->id)
-            ->with('success', 'Chat session đã được tạo thành công!');
-    }
-
-    /**
-     * Hiển thị chi tiết một chat session
-     */
     public function show(string $id)
     {
-        $chat = Chat::with(['user', 'messages' => function($query) {
+        $chat = Chat::with(['customer', 'messages' => function($query) {
             $query->orderBy('created_at', 'asc');
         }])->findOrFail($id);
 
         return view('admin.chats.show', compact('chat'));
     }
 
-    /**
-     * API endpoint để gửi tin nhắn và nhận phản hồi từ AI
-     */
     public function sendMessage(Request $request): JsonResponse
     {
         $request->validate([
@@ -74,44 +51,20 @@ class ChatController extends Controller
 
         $chat = Chat::findOrFail($request->chat_id);
 
-        // Lưu tin nhắn của user
-        $userMessage = ChatMessage::create([
+        $adminMessage = ChatMessage::create([
             'chat_id' => $chat->id,
-            'sender' => 'user',
+            'sender' => 'chatbot',
             'message' => $request->message,
         ]);
 
-        // Gọi API AI để lấy phản hồi
-        try {
-            $aiResponse = $this->getAIResponse($request->message, $chat);
+        $chat->touch();
 
-            // Lưu phản hồi của AI
-            $botMessage = ChatMessage::create([
-                'chat_id' => $chat->id,
-                'sender' => 'chatbot',
-                'message' => $aiResponse,
-            ]);
-
-            // Cập nhật thời gian chat
-            $chat->touch();
-
-            return response()->json([
-                'success' => true,
-                'user_message' => $userMessage,
-                'bot_message' => $botMessage,
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Không thể kết nối với AI service: ' . $e->getMessage(),
-            ], 500);
-        }
+        return response()->json([
+            'success' => true,
+            'message' => $adminMessage,
+        ]);
     }
 
-    /**
-     * API để lấy lịch sử tin nhắn của một chat
-     */
     public function getMessages(string $chatId): JsonResponse
     {
         $messages = ChatMessage::where('chat_id', $chatId)
@@ -121,9 +74,6 @@ class ChatController extends Controller
         return response()->json($messages);
     }
 
-    /**
-     * Đóng chat session
-     */
     public function closeChat(string $id): JsonResponse
     {
         $chat = Chat::findOrFail($id);
@@ -135,86 +85,103 @@ class ChatController extends Controller
         ]);
     }
 
-    /**
-     * Xóa chat session và tất cả tin nhắn
-     */
     public function destroy(string $id)
     {
         $chat = Chat::findOrFail($id);
 
-        // Xóa tất cả tin nhắn trước
         $chat->messages()->delete();
 
-        // Xóa chat session
         $chat->delete();
 
-        return redirect()->route('chats.index')
+        return redirect()->route('admin.chats.index')
             ->with('success', 'Chat đã được xóa thành công!');
     }
 
-    /**
-     * Gọi API AI để lấy phản hồi
-     */
-    private function getAIResponse(string $message, Chat $chat): string
+    public function analytics()
     {
-        // Lấy lịch sử hội thoại để cung cấp context
-        $context = $chat->messages()
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
+        $totalChats = Chat::count();
+        $totalMessages = ChatMessage::count();
+
+        $chatsByTopic = Chat::with('messages')->get()->groupBy(function($chat) {
+            return $chat->analyzeTopicFromMessages();
+        })->map(function($group) {
+            return $group->count();
+        });
+
+        $popularQuestions = ChatMessage::where('sender', 'customer')
+            ->selectRaw('message, COUNT(*) as count')
+            ->groupBy('message')
+            ->orderBy('count', 'desc')
+            ->limit(20)
+            ->get();
+
+        $allCustomerMessages = ChatMessage::where('sender', 'customer')
+            ->pluck('message')
+            ->implode(' ');
+
+        $words = str_word_count(strtolower($allCustomerMessages), 1, 'aàáảãạăắằẳẵặâấầẩẫậeèéẻẽẹêếềểễệiìíỉĩịoòóỏõọôốồổỗộơớờởỡợuùúủũụưứừửữựyỳýỷỹỵđ');
+        $commonWords = array_count_values($words);
+        arsort($commonWords);
+        $topKeywords = array_slice($commonWords, 0, 30, true);
+
+        $slowResponseChats = Chat::with(['customer', 'messages'])
             ->get()
-            ->reverse()
-            ->map(function($msg) {
-                return [
-                    'role' => $msg->sender === 'user' ? 'user' : 'assistant',
-                    'content' => $msg->message
-                ];
+            ->filter(function($chat) {
+                return $chat->getChatDurationInMinutes() > 30;
             })
-            ->toArray();
+            ->take(10);
 
-        // Thêm tin nhắn hiện tại
-        $context[] = [
-            'role' => 'user',
-            'content' => $message
-        ];
+        $chatsByDate = Chat::selectRaw('DATE(created_at) as date, COUNT(*) as count')
+            ->groupBy('date')
+            ->orderBy('date', 'desc')
+            ->limit(30)
+            ->get();
 
-        // Ví dụ gọi OpenAI API (bạn có thể thay bằng AI service khác)
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . config('services.openai.api_key'),
-            'Content-Type' => 'application/json',
-        ])->post('https://api.openai.com/v1/chat/completions', [
-            'model' => 'gpt-3.5-turbo',
-            'messages' => $context,
-            'max_tokens' => 500,
-            'temperature' => 0.7,
-        ]);
-
-        if ($response->successful()) {
-            $data = $response->json();
-            return $data['choices'][0]['message']['content'] ?? 'Xin lỗi, tôi không thể phản hồi lúc này.';
-        }
-
-        throw new \Exception('AI API không phản hồi');
+        return view('admin.chats.analytics', compact(
+            'totalChats',
+            'totalMessages',
+            'chatsByTopic',
+            'popularQuestions',
+            'topKeywords',
+            'slowResponseChats',
+            'chatsByDate'
+        ));
     }
 
-    /**
-     * Thống kê chat
-     */
-    public function statistics()
+    public function exportTrainingData()
     {
-        $stats = [
-            'total_chats' => Chat::count(),
-            'active_chats' => Chat::where('chat_status', 'active')->count(),
-            'closed_chats' => Chat::where('chat_status', 'closed')->count(),
-            'total_messages' => ChatMessage::count(),
-            'messages_today' => ChatMessage::whereDate('created_at', today())->count(),
-            'top_users' => Chat::with('user')
-                ->selectRaw('user_id, count(*) as chat_count')
-                ->groupBy('user_id')
-                ->orderBy('chat_count', 'desc')
-                ->limit(10)
-                ->get(),
-        ];
+        $trainingData = [];
 
-        return view('admin.chats.statistics', compact('stats'));
+        $chats = Chat::with(['messages' => function($query) {
+            $query->orderBy('created_at', 'asc');
+        }])->get();
+
+        foreach ($chats as $chat) {
+            $conversation = [];
+            foreach ($chat->messages as $message) {
+                $conversation[] = [
+                    'sender' => $message->sender,
+                    'message' => $message->message,
+                    'timestamp' => $message->created_at->toISOString()
+                ];
+            }
+
+            if (count($conversation) > 0) {
+                $trainingData[] = [
+                    'chat_id' => $chat->id,
+                    'topic' => $chat->analyzeTopicFromMessages(),
+                    'duration_minutes' => $chat->getChatDurationInMinutes(),
+                    'message_count' => count($conversation),
+                    'conversation' => $conversation
+                ];
+            }
+        }
+
+        $filename = 'chat_training_data_' . date('Y-m-d_H-i-s') . '.json';
+
+        return response()->json($trainingData, 200, [
+            'Content-Type' => 'application/json',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"'
+        ]);
     }
 }

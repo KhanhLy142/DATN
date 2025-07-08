@@ -1,9 +1,3 @@
-// ---------------------------------------------
-// Custom Scripts for Beautiec Cosmetic Website
-// Updated: Added Account Management Scripts
-// ---------------------------------------------
-
-// Auto dropdown on hover (account + cart)
 document.addEventListener("DOMContentLoaded", function () {
     const dropdowns = document.querySelectorAll('.position-relative');
 
@@ -24,7 +18,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 });
 
-// Scroll to top button (optional nếu bạn thích)
 const scrollTopButton = document.createElement('button');
 scrollTopButton.innerHTML = '⬆️';
 scrollTopButton.style.position = 'fixed';
@@ -50,36 +43,31 @@ scrollTopButton.addEventListener('click', function () {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
+
 document.addEventListener('DOMContentLoaded', function () {
     const items = document.querySelectorAll('.dropdown-submenu .dropdown-item');
 
     items.forEach(function (item) {
         item.addEventListener('click', function (e) {
-            e.preventDefault();
             items.forEach(i => i.classList.remove('active'));
             this.classList.add('active');
+            console.log('Menu item clicked:', this.href);
         });
     });
 });
 
-// ---------------------------------------------
-// Password Toggle Functionality (Show/Hide Password)
-// ---------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
-    // Tìm tất cả các nút toggle password
     const passwordToggles = document.querySelectorAll('.password-toggle');
 
     passwordToggles.forEach(function (toggle) {
         toggle.addEventListener('click', function (e) {
             e.preventDefault();
 
-            // Lấy target input từ data-target attribute
             const targetId = this.getAttribute('data-target');
             const passwordInput = document.getElementById(targetId);
             const icon = this.querySelector('i');
 
             if (passwordInput && icon) {
-                // Toggle giữa password và text type
                 if (passwordInput.type === 'password') {
                     passwordInput.type = 'text';
                     icon.classList.remove('bi-eye');
@@ -94,11 +82,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-// ---------------------------------------------
-// Form Validation Enhancement (Optional)
-// ---------------------------------------------
 document.addEventListener('DOMContentLoaded', function () {
-    // Tìm form đăng ký để thêm validation cho confirm password
+
     const registerForm = document.querySelector('form[action*="register"]');
 
     if (registerForm) {
@@ -106,74 +91,108 @@ document.addEventListener('DOMContentLoaded', function () {
         const confirmPassword = registerForm.querySelector('input[name="password_confirmation"]');
 
         if (password && confirmPassword) {
-            // Kiểm tra mật khẩu khớp khi người dùng nhập
             confirmPassword.addEventListener('input', function () {
                 if (this.value !== password.value) {
                     this.setCustomValidity('Mật khẩu xác nhận không khớp');
-                    this.classList.add('is-invalid');
+                    this.classList.remove('is-invalid', 'is-valid');
                 } else {
                     this.setCustomValidity('');
-                    this.classList.remove('is-invalid');
-                    this.classList.add('is-valid');
+                    this.classList.remove('is-invalid', 'is-valid');
                 }
             });
 
-            // Kiểm tra lại khi mật khẩu chính thay đổi
             password.addEventListener('input', function () {
                 if (confirmPassword.value && confirmPassword.value !== this.value) {
                     confirmPassword.setCustomValidity('Mật khẩu xác nhận không khớp');
-                    confirmPassword.classList.add('is-invalid');
+                    confirmPassword.classList.remove('is-invalid', 'is-valid');
                 } else if (confirmPassword.value) {
                     confirmPassword.setCustomValidity('');
-                    confirmPassword.classList.remove('is-invalid');
-                    confirmPassword.classList.add('is-valid');
+                    confirmPassword.classList.remove('is-invalid', 'is-valid');
                 }
             });
         }
     }
 });
 
-// ---------------------------------------------
-// Loading State for Forms (Optional Enhancement)
-// ---------------------------------------------
-document.addEventListener('DOMContentLoaded', function () {
-    const forms = document.querySelectorAll('form');
+function initLogoutHandling() {
+    const logoutForms = document.querySelectorAll('form[action*="logout"]');
 
-    forms.forEach(function (form) {
-        form.addEventListener('submit', function () {
-            const submitBtn = this.querySelector('button[type="submit"]');
-            if (submitBtn) {
-                const originalText = submitBtn.innerHTML;
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang xử lý...';
-
-                // Restore button sau 5 giây nếu form không submit thành công
-                setTimeout(function () {
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                }, 5000);
-            }
+    logoutForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
         });
     });
-});
 
-// ---------------------------------------------
-// ACCOUNT MANAGEMENT SCRIPTS
-// Scripts từ account.blade.php, account-edit.blade.php, change-password.blade.php
-// ---------------------------------------------
+    const logoutButtons = document.querySelectorAll('a[href*="logout"], button[onclick*="logout"]');
+    logoutButtons.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/logout';
 
-document.addEventListener('DOMContentLoaded', function () {
-    // Initialize account management features
-    initAvatarUpload();
-    initAccountFormValidation();
-    initPasswordStrengthChecker();
-    initPhoneFormatting();
-    initAutoHideAlerts();
-});
+            const token = document.createElement('input');
+            token.type = 'hidden';
+            token.name = '_token';
+            token.value = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-// ---------------------------------------------
-// Avatar Upload với Preview (account-edit.blade.php)
-// ---------------------------------------------
+            form.appendChild(token);
+            document.body.appendChild(form);
+            form.submit();
+        });
+    });
+}
+
+    function initSuccessNotifications() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const loginSuccess = urlParams.get('login_success');
+    const registerSuccess = urlParams.get('register_success');
+
+    if (loginSuccess === 'true') {
+        showCustomNotification('Đăng nhập thành công! Chào mừng bạn trở lại.', 'success');
+    }
+
+    if (registerSuccess === 'true') {
+        showCustomNotification('Đăng ký thành công! Chào mừng bạn đến với cửa hàng của chúng tôi.', 'success');
+    }
+
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function(alert) {
+            alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            alert.style.opacity = '0';
+            alert.style.transform = 'translateY(-20px)';
+
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 500);
+        });
+    }, 5000);
+}
+
+function showCustomNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show custom-notification`;
+    notification.innerHTML = `
+        <i class="bi bi-check-circle-fill me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    document.body.insertBefore(notification, document.body.firstChild);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(-20px)';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 300);
+    }, 4000);
+}
+
 function initAvatarUpload() {
     const avatarInput = document.getElementById('avatar-input');
     const avatarPreview = document.getElementById('avatar-preview');
@@ -182,7 +201,6 @@ function initAvatarUpload() {
         avatarInput.addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (file) {
-                // Validate file type
                 const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                 if (!allowedTypes.includes(file.type)) {
                     alert('Vui lòng chọn file ảnh hợp lệ (JPG, PNG, GIF, WebP)');
@@ -190,7 +208,6 @@ function initAvatarUpload() {
                     return;
                 }
 
-                // Validate file size (max 5MB)
                 if (file.size > 5 * 1024 * 1024) {
                     alert('Kích thước file không được vượt quá 5MB');
                     this.value = '';
@@ -200,7 +217,6 @@ function initAvatarUpload() {
                 const reader = new FileReader();
                 reader.onload = function(e) {
                     avatarPreview.src = e.target.result;
-                    // Add loading effect
                     avatarPreview.style.opacity = '0.5';
                     setTimeout(() => {
                         avatarPreview.style.opacity = '1';
@@ -212,9 +228,6 @@ function initAvatarUpload() {
     }
 }
 
-// ---------------------------------------------
-// Account Form Validation (account-edit.blade.php)
-// ---------------------------------------------
 function initAccountFormValidation() {
     const accountForm = document.querySelector('form[action*="account"]');
 
@@ -223,26 +236,15 @@ function initAccountFormValidation() {
         const password = accountForm.querySelector('#password');
         const passwordConfirmation = accountForm.querySelector('#password_confirmation');
 
-        // Form submission handling
-        accountForm.addEventListener('submit', function(e) {
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<div class="loading-spinner me-2"></div>Đang lưu...';
-            }
-        });
-
-        // Password confirmation validation
         if (password && passwordConfirmation) {
             function validatePasswordMatch() {
                 if (password.value && passwordConfirmation.value) {
                     if (password.value !== passwordConfirmation.value) {
                         passwordConfirmation.setCustomValidity('Mật khẩu xác nhận không khớp');
-                        passwordConfirmation.classList.add('is-invalid');
-                        passwordConfirmation.classList.remove('is-valid');
+                        passwordConfirmation.classList.remove('is-invalid', 'is-valid');
                     } else {
                         passwordConfirmation.setCustomValidity('');
-                        passwordConfirmation.classList.remove('is-invalid');
-                        passwordConfirmation.classList.add('is-valid');
+                        passwordConfirmation.classList.remove('is-invalid', 'is-valid');
                     }
                 }
             }
@@ -253,9 +255,6 @@ function initAccountFormValidation() {
     }
 }
 
-// ---------------------------------------------
-// Password Strength Checker (change-password.blade.php)
-// ---------------------------------------------
 function initPasswordStrengthChecker() {
     const passwordInput = document.getElementById('password');
     const strengthBar = document.getElementById('password-strength');
@@ -272,7 +271,6 @@ function initPasswordStrengthChecker() {
             if (password.match(/[0-9]/)) score++;
             if (password.match(/[^a-zA-Z0-9]/)) score++;
 
-            // Remove previous classes
             strengthBar.className = 'progress-bar';
 
             switch(score) {
@@ -313,7 +311,6 @@ function initPasswordStrengthChecker() {
         });
     }
 
-    // Password match validation for change password form
     const changePasswordForm = document.getElementById('change-password-form');
     if (changePasswordForm) {
         const password = changePasswordForm.querySelector('#password');
@@ -326,13 +323,11 @@ function initPasswordStrengthChecker() {
                     if (password.value === passwordConfirmation.value) {
                         matchFeedback.innerHTML = '<small class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Mật khẩu khớp</small>';
                         passwordConfirmation.setCustomValidity('');
-                        passwordConfirmation.classList.remove('is-invalid');
-                        passwordConfirmation.classList.add('is-valid');
+                        passwordConfirmation.classList.remove('is-invalid', 'is-valid');
                     } else {
                         matchFeedback.innerHTML = '<small class="text-danger"><i class="bi bi-x-circle-fill me-1"></i>Mật khẩu không khớp</small>';
                         passwordConfirmation.setCustomValidity('Mật khẩu xác nhận không khớp');
-                        passwordConfirmation.classList.add('is-invalid');
-                        passwordConfirmation.classList.remove('is-valid');
+                        passwordConfirmation.classList.remove('is-invalid', 'is-valid');
                     }
                 } else {
                     matchFeedback.innerHTML = '';
@@ -345,7 +340,6 @@ function initPasswordStrengthChecker() {
             passwordConfirmation.addEventListener('input', validatePasswordMatch);
         }
 
-        // Form submission validation
         changePasswordForm.addEventListener('submit', function(e) {
             const passwordStrong = checkPasswordStrength(password.value);
 
@@ -360,20 +354,10 @@ function initPasswordStrengthChecker() {
                 alert('Mật khẩu xác nhận không khớp');
                 return false;
             }
-
-            // Show loading state
-            const submitBtn = this.querySelector('#submit-btn');
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<div class="loading-spinner me-2"></div>Đang xử lý...';
-            }
         });
     }
 }
 
-// ---------------------------------------------
-// Phone Number Formatting (account-edit.blade.php)
-// ---------------------------------------------
 function initPhoneFormatting() {
     const phoneInput = document.getElementById('phone');
 
@@ -382,21 +366,19 @@ function initPhoneFormatting() {
             let value = e.target.value.replace(/\D/g, '');
             if (value.length > 0) {
                 if (value.length <= 10) {
-                    // Format: 0123 456 789
                     value = value.replace(/(\d{4})(\d{3})(\d{3})/, '$1 $2 $3');
                 }
             }
             e.target.value = value;
         });
 
-        // Validate Vietnamese phone number
         phoneInput.addEventListener('blur', function() {
             const phoneRegex = /^[0-9]{10,11}$/;
             const cleanPhone = this.value.replace(/\s/g, '');
 
             if (cleanPhone && !phoneRegex.test(cleanPhone)) {
                 this.setCustomValidity('Số điện thoại không hợp lệ');
-                this.classList.add('is-invalid');
+                this.classList.remove('is-invalid', 'is-valid');
             } else {
                 this.setCustomValidity('');
                 this.classList.remove('is-invalid');
@@ -405,35 +387,28 @@ function initPhoneFormatting() {
     }
 }
 
-// ---------------------------------------------
-// Auto Hide Alerts (từ tất cả các views)
-// ---------------------------------------------
 function initAutoHideAlerts() {
     setTimeout(function() {
-        const alerts = document.querySelectorAll('.alert');
+        const alerts = document.querySelectorAll('.alert:not(.custom-notification)');
         alerts.forEach(function(alert) {
-            if (alert.classList.contains('fade')) {
-                alert.classList.remove('show');
-                setTimeout(() => {
-                    if (alert.parentNode) {
-                        alert.remove();
-                    }
-                }, 150);
-            }
+            alert.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            alert.style.opacity = '0';
+            alert.style.transform = 'translateY(-20px)';
+
+            setTimeout(() => {
+                if (alert.parentNode) {
+                    alert.remove();
+                }
+            }, 500);
         });
-    }, 5000); // Hide after 5 seconds
+    }, 5000);
 }
 
-// ---------------------------------------------
-// Reset Form Functions (change-password.blade.php)
-// ---------------------------------------------
 function resetForm() {
     if (confirm('Bạn có chắc chắn muốn đặt lại form?')) {
         const form = document.getElementById('change-password-form') || document.querySelector('form');
         if (form) {
             form.reset();
-
-            // Reset password strength indicator
             const strengthBar = document.getElementById('password-strength');
             const strengthText = document.getElementById('password-strength-text');
             const matchFeedback = document.getElementById('password-match-feedback');
@@ -449,13 +424,11 @@ function resetForm() {
                 matchFeedback.innerHTML = '';
             }
 
-            // Reset avatar preview
             const avatarPreview = document.getElementById('avatar-preview');
             if (avatarPreview) {
                 avatarPreview.src = avatarPreview.getAttribute('data-default') || '/images/default-avatar.png';
             }
 
-            // Reset validation states
             const inputs = form.querySelectorAll('.form-control');
             inputs.forEach(function(input) {
                 input.classList.remove('is-valid', 'is-invalid');
@@ -465,56 +438,50 @@ function resetForm() {
     }
 }
 
-// ---------------------------------------------
-// CSS Animations và Styles (nếu chưa có)
-// ---------------------------------------------
 document.addEventListener('DOMContentLoaded', function() {
-    // Add CSS if not exists
-    if (!document.getElementById('custom-account-styles')) {
-        const style = document.createElement('style');
-        style.id = 'custom-account-styles';
-        style.textContent = `
-            .loading-spinner {
-                width: 1rem;
-                height: 1rem;
-                border: 2px solid transparent;
-                border-top: 2px solid currentColor;
-                border-radius: 50%;
-                display: inline-block;
-                animation: spin 1s linear infinite;
+    const anchorLinks = document.querySelectorAll('a[href^="#"]');
+    anchorLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
             }
+        });
+    });
+});
 
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        showCustomNotification('Đã sao chép vào clipboard!', 'info');
+    });
+}
 
-            .progress-bar {
-                transition: all 0.3s ease;
-            }
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+    }).format(amount);
+}
 
-            .avatar-wrapper:hover .btn {
-                opacity: 1;
-            }
+document.addEventListener('DOMContentLoaded', function() {
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.classList.remove('lazy');
+                    imageObserver.unobserve(img);
+                }
+            });
+        });
 
-            .avatar-wrapper .btn {
-                opacity: 0.8;
-                transition: opacity 0.2s;
-            }
-
-            .password-toggle:hover {
-                background-color: #f8f9fa;
-            }
-
-            .alert {
-                transition: opacity 0.15s linear;
-            }
-
-            .form-control:focus {
-                border-color: #e91e63;
-                box-shadow: 0 0 0 0.2rem rgba(233, 30, 99, 0.25);
-            }
-        `;
-        document.head.appendChild(style);
+        document.querySelectorAll('img[data-src]').forEach(img => {
+            imageObserver.observe(img);
+        });
     }
 });

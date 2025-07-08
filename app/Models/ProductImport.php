@@ -20,7 +20,6 @@ class ProductImport extends Model
         'total_cost' => 'decimal:2'
     ];
 
-    // Tự động tạo mã đơn nhập khi tạo mới
     protected static function boot()
     {
         parent::boot();
@@ -39,25 +38,21 @@ class ProductImport extends Model
         return 'IMP' . $today->format('Ymd') . str_pad($count, 3, '0', STR_PAD_LEFT);
     }
 
-    // Relationship với Supplier
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
     }
 
-    // Relationship với ProductImportItem
     public function items()
     {
         return $this->hasMany(ProductImportItem::class, 'import_id');
     }
 
-    // Accessor để format tổng tiền
     public function getFormattedTotalCostAttribute()
     {
         return number_format($this->total_cost, 0, ',', '.') . ' ₫';
     }
 
-    // Accessor để lấy tổng số sản phẩm
     public function getTotalItemsAttribute()
     {
         return $this->items->sum('quantity');

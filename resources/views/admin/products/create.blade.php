@@ -4,7 +4,6 @@
 
 @section('content')
     <div class="container mt-5">
-        <!-- Tiêu đề trang -->
         <h4 class="fw-bold text-center text-pink fs-2 mb-4">Thêm sản phẩm</h4>
 
         <div class="row justify-content-center">
@@ -12,7 +11,6 @@
                 <div class="card shadow-sm border-0 rounded-4">
                     <div class="card-body p-4">
 
-                        {{-- Thông báo --}}
                         @if(session('success'))
                             <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
                                 <div class="d-flex align-items-center">
@@ -59,7 +57,6 @@
                         <form method="POST" action="{{ route('admin.products.store') }}" enctype="multipart/form-data">
                             @csrf
 
-                            <!-- Thông tin sản phẩm chính -->
                             <h5 class="fw-bold text-primary mb-3">
                                 <i class="bi bi-box"></i> Thông tin cơ bản
                             </h5>
@@ -101,9 +98,14 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Hình ảnh</label>
-                                <input type="file" class="form-control" name="image" accept="image/*">
-                                <small class="form-text text-muted">Chọn ảnh định dạng JPG, PNG, GIF. Kích thước tối đa 2MB.</small>
+                                <label class="form-label fw-semibold">Hình ảnh sản phẩm <span class="text-info">(Tối đa 5 ảnh)</span></label>
+                                <input type="file" class="form-control" name="images[]" accept="image/*" multiple id="imageInput">
+                                <small class="form-text text-muted">
+                                    Chọn tối đa 5 ảnh định dạng JPG, PNG, GIF. Kích thước tối đa 2MB mỗi ảnh.
+                                    <strong>Ảnh đầu tiên sẽ là ảnh đại diện.</strong>
+                                </small>
+
+                                <div id="imagePreview" class="mt-3"></div>
                             </div>
 
                             <div class="row">
@@ -137,16 +139,13 @@
 
                             <hr class="my-4">
 
-                            <!-- Thêm các biến thể sản phẩm -->
                             <h5 class="fw-bold text-info mb-3">
                                 <i class="bi bi-collection"></i> Biến thể sản phẩm <span class="text-muted fs-6">(không bắt buộc)</span>
                             </h5>
                             <p class="text-muted">Thêm các biến thể như màu sắc, dung tích, mùi hương cho sản phẩm.</p>
 
-                            <!-- Phần biến thể đã cải tiến -->
                             <div id="variant-container">
                                 <div class="variant-group border p-3 rounded-3 mb-3 bg-light">
-                                    <!-- Dòng đầu: Tên biến thể -->
                                     <div class="row mb-3">
                                         <div class="col-12">
                                             <label class="form-label fw-semibold">Tên biến thể</label>
@@ -154,7 +153,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Dòng thứ 2: Thuộc tính sản phẩm -->
                                     <div class="row mb-3">
                                         <div class="col-md-4">
                                             <label class="form-label">Màu sắc</label>
@@ -170,7 +168,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Dòng thứ 3: Giá và tồn kho -->
                                     <div class="row mb-3">
                                         <div class="col-md-6">
                                             <label class="form-label">Giá <span class="text-danger">*</span></label>
@@ -189,7 +186,6 @@
                                         </div>
                                     </div>
 
-                                    <!-- Nút xóa -->
                                     <div class="row">
                                         <div class="col-12 text-end">
                                             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVariant(this)">
@@ -208,7 +204,6 @@
 
                             <hr class="my-4">
 
-                            <!-- Trạng thái -->
                             <div class="mb-4">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" name="status" value="1" {{ old('status', 1) ? 'checked' : '' }}>
@@ -219,7 +214,6 @@
                                 <small class="form-text text-muted">Bỏ tick để ẩn sản phẩm khỏi cửa hàng</small>
                             </div>
 
-                            <!-- Nút hành động -->
                             <div class="text-end">
                                 <button class="btn btn-pink" type="submit">Lưu sản phẩm</button>
                                 <a href="{{ route('admin.products.index') }}" class="btn btn-secondary">Hủy</a>
@@ -230,4 +224,101 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.getElementById('imageInput').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const preview = document.getElementById('imagePreview');
+            preview.innerHTML = '';
+
+            if (files.length > 5) {
+                alert('Tối đa 5 ảnh!');
+                e.target.value = '';
+                return;
+            }
+
+            Array.from(files).forEach((file, index) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const div = document.createElement('div');
+                        div.className = 'd-inline-block me-3 mb-3 position-relative';
+                        div.innerHTML = `
+                            <img src="${e.target.result}" class="img-thumbnail" width="120" height="120" style="object-fit: cover;">
+                            <span class="position-absolute top-0 start-0 badge bg-primary">${index + 1}</span>
+                            ${index === 0 ? '<span class="position-absolute bottom-0 start-0 badge bg-success">Ảnh chính</span>' : ''}
+                        `;
+                        preview.appendChild(div);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        });
+
+        let variantIndex = 1;
+
+        function addVariant() {
+            const container = document.getElementById('variant-container');
+            const variantHtml = `
+                <div class="variant-group border p-3 rounded-3 mb-3 bg-light">
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Tên biến thể</label>
+                            <input type="text" name="variants[${variantIndex}][variant_name]" class="form-control" placeholder="VD: Son đỏ 3g">
+                        </div>
+                    </div>
+
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Màu sắc</label>
+                            <input type="text" name="variants[${variantIndex}][color]" class="form-control" placeholder="Đỏ, Hồng...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Dung tích</label>
+                            <input type="text" name="variants[${variantIndex}][volume]" class="form-control" placeholder="3g, 50ml...">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Mùi hương</label>
+                            <input type="text" name="variants[${variantIndex}][scent]" class="form-control" placeholder="Hương hoa hồng...">
+                        </div>
+                    </div>
+
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Giá <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₫</span>
+                                <input type="number" name="variants[${variantIndex}][price]" class="form-control" step="1000" min="0" placeholder="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tồn kho</label>
+                            <input type="number" name="variants[${variantIndex}][stock_quantity]" class="form-control" min="0" value="0" placeholder="0">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 text-end">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeVariant(this)">
+                                <i class="bi bi-trash"></i> Xóa biến thể
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', variantHtml);
+            variantIndex++;
+        }
+
+        function removeVariant(button) {
+            if (document.querySelectorAll('.variant-group').length > 1) {
+                button.closest('.variant-group').remove();
+            } else {
+                alert('Phải có ít nhất một biến thể!');
+            }
+        }
+    </script>
 @endsection

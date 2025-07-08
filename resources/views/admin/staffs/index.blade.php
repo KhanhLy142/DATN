@@ -7,9 +7,8 @@
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <h4 class="fw-bold text-center text-pink fs-2 mb-4">Quản lý nhân viên</h4>
+                    <h4 class="fw-bold text-center text-pink fs-2 mb-4">Danh sách nhân viên</h4>
                     <div class="card-body">
-                        <!-- Form tìm kiếm và lọc -->
                         <div class="row mb-4">
                             <div class="col-12">
                                 <form method="GET" action="{{ route('admin.staffs.index') }}" class="row g-3">
@@ -36,14 +35,12 @@
                             </div>
                         </div>
 
-                        <!-- Nút thêm mới -->
                         <div class="mb-3">
                             <a href="{{ route('admin.staffs.create') }}" class="btn btn-primary">
                                 Thêm mới
                             </a>
                         </div>
 
-                        <!-- Bảng danh sách nhân viên -->
                         <div class="table-responsive">
                             <table class="table table-striped table-hover">
                                 <thead class="table-light">
@@ -111,7 +108,6 @@
                             </table>
                         </div>
 
-                        <!-- Phân trang -->
                         @include('admin.layouts.pagination', ['paginator' => $staffs, 'itemName' => 'nhân viên'])
                     </div>
                 </div>

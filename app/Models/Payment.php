@@ -2,20 +2,20 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'order_id',
         'amount',
         'payment_method',
         'payment_status',
-        'momo_transaction_id',
         'payment_note',
-        'created_at',
-        'updated_at'
+        'vnpay_transaction_id'
     ];
 
     protected $casts = [
@@ -24,65 +24,140 @@ class Payment extends Model
         'updated_at' => 'datetime',
     ];
 
-    // Relationships
-    public function order(): BelongsTo
+    public function order()
     {
         return $this->belongsTo(Order::class);
     }
 
-    // Scopes
-    public function scopePending($query)
+    public function saveVNPayResponse($vnpayData)
     {
-        return $query->where('payment_status', 'pending');
+        $responseCode = $vnpayData['vnp_ResponseCode'] ?? '';
+        $transactionNo = $vnpayData['vnp_TransactionNo'] ?? '';
+
+        if ($responseCode === '00') {
+            $vnpayInfo = [
+                'transaction_no' => $transactionNo,
+                'response_code' => $responseCode,
+                'amount' => isset($vnpayData['vnp_Amount']) ? ($vnpayData['vnp_Amount'] / 100) : 0,
+                'bank_code' => $vnpayData['vnp_BankCode'] ?? '',
+                'pay_date' => $vnpayData['vnp_PayDate'] ?? '',
+                'status' => 'success'
+            ];
+
+            $this->update([
+                'payment_status' => 'completed',
+                'vnpay_transaction_id' => $transactionNo,
+                'payment_note' => 'VNPay: ' . json_encode($vnpayInfo)
+            ]);
+
+        } else {
+            $vnpayInfo = [
+                'response_code' => $responseCode,
+                'status' => 'failed',
+                'message' => $this->getVNPayErrorMessage($responseCode)
+            ];
+
+            $this->update([
+                'payment_status' => 'failed',
+                'vnpay_transaction_id' => $transactionNo,
+                'payment_note' => 'VNPay: ' . json_encode($vnpayInfo)
+            ]);
+        }
     }
 
-    public function scopeCompleted($query)
+    public function getVNPayInfo()
     {
-        return $query->where('payment_status', 'completed');
+        if ($this->payment_method !== 'vnpay' || !$this->payment_note) {
+            return null;
+        }
+
+        if (strpos($this->payment_note, 'VNPay:') === 0) {
+            $jsonData = substr($this->payment_note, 7);
+            return json_decode($jsonData, true);
+        }
+
+        return null;
     }
 
-    public function scopeFailed($query)
+    public function getVNPayTransactionNoAttribute()
     {
-        return $query->where('payment_status', 'failed');
+        if ($this->vnpay_transaction_id) {
+            return $this->vnpay_transaction_id;
+        }
+
+        $vnpayInfo = $this->getVNPayInfo();
+        return $vnpayInfo['transaction_no'] ?? null;
     }
 
-    public function scopeRefunded($query)
+    private function getVNPayErrorMessage($code)
     {
-        return $query->where('payment_status', 'refunded');
+        $messages = [
+            '07' => 'Trừ tiền thành công. Giao dịch bị nghi ngờ (liên quan tới lừa đảo, giao dịch bất thường).',
+            '09' => 'Thẻ/Tài khoản chưa đăng ký dịch vụ InternetBanking.',
+            '10' => 'Xác thực thông tin thẻ/tài khoản không đúng quá 3 lần',
+            '11' => 'Đã hết hạn chờ thanh toán.',
+            '12' => 'Thẻ/Tài khoản bị khóa.',
+            '13' => 'Nhập sai mật khẩu xác thực giao dịch (OTP).',
+            '24' => 'Khách hàng hủy giao dịch',
+            '51' => 'Tài khoản không đủ số dư.',
+            '65' => 'Tài khoản đã vượt quá hạn mức giao dịch trong ngày.',
+            '75' => 'Ngân hàng thanh toán đang bảo trì.',
+            '79' => 'Nhập sai mật khẩu thanh toán quá số lần quy định.',
+            '99' => 'Các lỗi khác'
+        ];
+
+        return $messages[$code] ?? 'Giao dịch thất bại - Mã lỗi: ' . $code;
     }
 
-    // Scope for search
+    public function getPaymentMethodLabelAttribute()
+    {
+        $labels = [
+            'cod' => 'Thanh toán khi nhận hàng',
+            'vnpay' => 'VNPay',
+            'bank_transfer' => 'Chuyển khoản ngân hàng'
+        ];
+
+        return $labels[$this->payment_method] ?? $this->payment_method;
+    }
+
+    public function canBeRefunded()
+    {
+        return $this->payment_status === 'completed' &&
+            in_array($this->payment_method, ['vnpay', 'bank_transfer']);
+    }
+
+    public function canBeUpdated()
+    {
+        return $this->payment_status === 'pending';
+    }
+
+    public function markAsRefunded($reason = '')
+    {
+        $this->update([
+            'payment_status' => 'refunded',
+            'payment_note' => $this->payment_note . ' | Hoàn tiền: ' . $reason
+        ]);
+    }
+
     public function scopeSearch($query, $search)
     {
-        if ($search) {
-            return $query->where(function ($q) use ($search) {
-                $q->where('order_id', 'like', "%{$search}%")
-                    ->orWhere('momo_transaction_id', 'like', "%{$search}%")
-                    ->orWhere('payment_note', 'like', "%{$search}%");
-            });
-        }
-        return $query;
+        return $query->whereHas('order', function($q) use ($search) {
+            $q->where('id', 'like', "%{$search}%")
+                ->orWhere('tracking_number', 'like', "%{$search}%")
+                ->orWhere('vnpay_transaction_id', 'like', "%{$search}%");
+        })->orWhere('vnpay_transaction_id', 'like', "%{$search}%");
     }
 
-    // Scope for filter by method
     public function scopeByMethod($query, $method)
     {
-        if ($method) {
-            return $query->where('payment_method', $method);
-        }
-        return $query;
+        return $query->where('payment_method', $method);
     }
 
-    // Scope for filter by status
     public function scopeByStatus($query, $status)
     {
-        if ($status) {
-            return $query->where('payment_status', $status);
-        }
-        return $query;
+        return $query->where('payment_status', $status);
     }
 
-    // Scope for date range
     public function scopeDateRange($query, $dateFrom, $dateTo)
     {
         if ($dateFrom) {
@@ -94,84 +169,14 @@ class Payment extends Model
         return $query;
     }
 
-    // Accessors
-    public function getPaymentMethodLabelAttribute()
+    public function scopeByVnpayTransaction($query, $transactionId)
     {
-        $methods = [
-            'cod' => 'COD',
-            'momo' => 'MoMo'
-        ];
-
-        return $methods[$this->payment_method] ?? ucfirst($this->payment_method);
+        return $query->where('vnpay_transaction_id', $transactionId);
     }
 
-    public function getPaymentStatusLabelAttribute()
+    public function scopeVnpayOnly($query)
     {
-        $statuses = [
-            'pending' => 'Đang chờ',
-            'completed' => 'Hoàn thành',
-            'failed' => 'Thất bại'
-        ];
-
-        return $statuses[$this->payment_status] ?? ucfirst($this->payment_status);
+        return $query->where('payment_method', 'vnpay');
     }
 
-    public function getFormattedAmountAttribute()
-    {
-        return number_format($this->amount, 0, ',', '.') . 'đ';
-    }
-
-    // Methods
-    public function markAsCompleted()
-    {
-        $this->update(['payment_status' => 'completed']);
-
-        // Cập nhật trạng thái đơn hàng
-        if ($this->order && $this->order->status === 'pending') {
-            $this->order->update(['status' => 'processing']);
-        }
-    }
-
-    public function markAsFailed()
-    {
-        $this->update(['payment_status' => 'failed']);
-    }
-
-    public function markAsRefunded($reason = null)
-    {
-        $this->update([
-            'payment_status' => 'refunded',
-            'payment_note' => $reason ? "Hoàn tiền: {$reason}" : 'Hoàn tiền'
-        ]);
-    }
-
-    public function canBeRefunded()
-    {
-        return in_array($this->payment_status, ['completed']);
-    }
-
-    public function canBeUpdated()
-    {
-        return $this->payment_status === 'pending';
-    }
-
-    // Thêm vào PaymentController.php
-
-    public function show(Payment $payment)
-    {
-        $payment->load('order'); // Load thông tin đơn hàng liên quan
-
-        return view('admin.payments.show', compact('payment'));
-    }
-
-    public function edit(Payment $payment)
-    {
-        // Chỉ cho phép edit payment đang pending
-        if ($payment->payment_status !== 'pending') {
-            return redirect()->route('admin.payments.index')
-                ->with('error', 'Chỉ có thể cập nhật giao dịch đang chờ xử lý');
-        }
-
-        return view('admin.payments.edit', compact('payment'));
-    }
 }

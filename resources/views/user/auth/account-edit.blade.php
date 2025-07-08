@@ -1,9 +1,5 @@
-{{-- Phần đầu giữ nguyên --}}
 @extends('user.layouts.master')
-
 @section('title', 'Cập nhật thông tin tài khoản')
-
-{{-- Breadcrumb giữ nguyên --}}
 @section('banner')
     <section class="bg-light py-3">
         <div class="container">
@@ -21,13 +17,12 @@
 @section('content')
     <div class="container py-5">
         <div class="row">
-            {{-- Sidebar giữ nguyên --}}
             <div class="col-lg-3 mb-4">
                 <div class="card shadow-sm rounded-4">
                     <div class="card-body p-4">
                         <div class="text-center mb-4">
-                            <h6 class="mt-2 mb-0 fw-bold">{{ $user->name }}</h6>
-                            <small class="text-muted">Thành viên từ {{ $user->created_at->format('m/Y') }}</small>
+                            <h6 class="mt-2 mb-0 fw-bold">{{ Auth::guard('customer')->user()->name }}</h6>
+                            <small class="text-muted">Thành viên từ {{ Auth::guard('customer')->user()->created_at->format('m/Y') }}</small>
                         </div>
 
                         <div class="list-group list-group-flush">
@@ -43,18 +38,20 @@
                                 <i class="bi bi-shield-lock me-2"></i>
                                 Đổi mật khẩu
                             </a>
-                            <a href="#" class="list-group-item list-group-item-action border-0 rounded-3 text-danger">
-                                <i class="bi bi-box-arrow-right me-2"></i>
-                                Đăng xuất
-                            </a>
+                            <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="list-group-item list-group-item-action border-0 rounded-3 text-danger w-100 text-start"
+                                        style="background: none; border: none;">
+                                    <i class="bi bi-box-arrow-right me-2"></i>
+                                    Đăng xuất
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {{-- Main Content --}}
             <div class="col-lg-9">
-                {{-- Header giữ nguyên --}}
                 <div class="card shadow-sm rounded-4 p-4 mb-4">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -69,9 +66,7 @@
                     </div>
                 </div>
 
-                {{-- Form cập nhật thông tin --}}
                 <div class="card shadow-sm rounded-4 p-4">
-                    {{-- Hiển thị thông báo --}}
                     @if (session('success'))
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             <i class="bi bi-check-circle-fill me-2"></i>
@@ -93,7 +88,6 @@
                         </div>
                     @endif
 
-                    {{-- Form với dữ liệu từ customer --}}
                     <form action="{{ route('account.update') }}" method="POST">
                         @csrf
                         @method('PUT')
@@ -182,7 +176,6 @@
                             </div>
                         </div>
 
-                        {{-- Nút hành động --}}
                         <div class="row">
                             <div class="col-12">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -210,79 +203,3 @@
     </div>
 @endsection
 
-
-@push('styles')
-    <style>
-        .list-group-item.active {
-            background-color: var(--bs-pink);
-            border-color: var(--bs-pink);
-        }
-
-        .input-group-text {
-            min-width: 45px;
-            justify-content: center;
-        }
-
-        .form-control:focus {
-            border-color: #e91e63;
-            box-shadow: 0 0 0 0.2rem rgba(233, 30, 99, 0.25);
-        }
-
-        .password-toggle {
-            cursor: pointer;
-        }
-
-        .password-toggle:hover {
-            background-color: #f8f9fa;
-        }
-
-        .avatar-wrapper:hover .btn {
-            opacity: 1;
-        }
-
-        .avatar-wrapper .btn {
-            opacity: 0.8;
-            transition: opacity 0.2s;
-        }
-
-        #submit-btn {
-            min-width: 140px;
-            position: relative;
-        }
-
-        #submit-btn:disabled {
-            opacity: 0.6;
-        }
-
-        .loading-spinner {
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid transparent;
-            border-top: 2px solid currentColor;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .alert {
-            border: none;
-            border-radius: 0.75rem;
-        }
-
-        .form-control, .input-group-text {
-            border-radius: 0.5rem;
-        }
-
-        .input-group .form-control:not(:first-child) {
-            border-left: 0;
-        }
-
-        .input-group .form-control:not(:last-child) {
-            border-right: 0;
-        }
-    </style>
-@endpush

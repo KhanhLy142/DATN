@@ -1,15 +1,12 @@
 @if($paginator->hasPages())
     <div class="pagination-wrapper">
-        {{-- Thông tin kết quả --}}
         <div class="pagination-info">
             Hiển thị {{ $paginator->firstItem() }} - {{ $paginator->lastItem() }}
             của {{ $paginator->total() }} {{ $itemName ?? 'kết quả' }}
         </div>
 
-        {{-- Custom pagination --}}
         <nav aria-label="Pagination">
             <ul class="pagination">
-                {{-- Previous --}}
                 @if ($paginator->onFirstPage())
                     <li class="page-item disabled">
                         <span class="page-link"><i class="bi bi-chevron-left"></i></span>
@@ -20,7 +17,6 @@
                     </li>
                 @endif
 
-                {{-- Page Numbers --}}
                 @php
                     $start = max($paginator->currentPage() - 2, 1);
                     $end = min($start + 4, $paginator->lastPage());
@@ -61,7 +57,6 @@
                     </li>
                 @endif
 
-                {{-- Next --}}
                 @if ($paginator->hasMorePages())
                     <li class="page-item">
                         <a class="page-link" href="{{ $paginator->appends(request()->query())->nextPageUrl() }}"><i class="bi bi-chevron-right"></i></a>

@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('reviews', function (Blueprint $table) {
@@ -17,16 +14,15 @@ return new class extends Migration
             $table->unsignedBigInteger('customer_id');
             $table->integer('rating');
             $table->text('comment');
+            $table->tinyInteger('status')->default(1);
+            $table->text('reply')->nullable();
             $table->timestamps();
+
             $table->foreign('product_id')->references('id')->on('products');
             $table->foreign('customer_id')->references('id')->on('customers');
         });
     }
 
-
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('reviews');

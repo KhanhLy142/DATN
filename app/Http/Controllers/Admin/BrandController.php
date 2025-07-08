@@ -15,19 +15,24 @@ class BrandController extends Controller
     {
         $query = Brand::with('supplier');
 
-        if ($request->has('status') && $request->status !== '') {
+        if ($request->has('search') && !empty(trim($request->search))) {
+            $searchTerm = trim($request->search);
+            $query->where('name', 'like', '%' . $searchTerm . '%');
+        }
+
+        if ($request->has('status') && $request->status !== '' && $request->status !== null) {
             $query->where('status', $request->status);
         }
 
-        if ($request->has('supplier_id') && $request->supplier_id !== '') {
+        if ($request->has('supplier_id') && !empty($request->supplier_id)) {
             $query->where('supplier_id', $request->supplier_id);
         }
 
-        if ($request->has('search') && $request->search !== '') {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
         $brands = $query->orderBy('name')->paginate(15);
+
+
+        $brands->appends($request->query());
+
         $suppliers = Supplier::active()->orderBy('name')->get();
 
         return view('admin.brands.index', compact('brands', 'suppliers'));

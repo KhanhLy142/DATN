@@ -6,7 +6,6 @@
     <div class="container py-5">
         <h4 class="fw-bold text-center text-pink fs-2 mb-4">Danh sách đánh giá sản phẩm</h4>
 
-        {{-- Thông báo --}}
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 {{ session('success') }}
@@ -14,7 +13,6 @@
             </div>
         @endif
 
-        {{-- Bộ lọc --}}
         <form method="GET" action="{{ route('admin.reviews.index') }}" class="mb-4">
             <div class="row">
                 <div class="col-md-4">
@@ -55,7 +53,6 @@
             </div>
         </form>
 
-        {{-- Bảng đánh giá --}}
         <div class="table-responsive">
             <table class="table table-bordered align-middle text-center shadow-sm bg-white">
                 <thead class="bg-light">
@@ -102,13 +99,11 @@
                         <td>{{ $review->created_at->format('d/m/Y') }}</td>
                         <td>{!! $review->status_badge !!}</td>
                         <td>
-                            {{-- Phản hồi --}}
                             <a href="{{ route('admin.reviews.reply', $review->id) }}"
                                class="btn btn-sm btn-outline-info me-1" title="Phản hồi">
                                 <i class="bi bi-chat-dots"></i>
                             </a>
 
-                            {{-- Ẩn/Hiện --}}
                             <form action="{{ route('admin.reviews.toggle-status', $review->id) }}"
                                   method="POST" class="d-inline-block">
                                 @csrf
@@ -119,7 +114,6 @@
                                 </button>
                             </form>
 
-                            {{-- Xoá --}}
                             <form action="{{ route('admin.reviews.destroy', $review->id) }}"
                                   method="POST" class="d-inline-block"
                                   onsubmit="return confirm('Bạn có chắc muốn xoá đánh giá này?')">
@@ -142,7 +136,6 @@
             </table>
         </div>
 
-        {{-- Phân trang tùy chỉnh --}}
         @if($reviews->hasPages())
             <div class="d-flex justify-content-center mt-4">
                 @include('admin.layouts.pagination', [
@@ -152,7 +145,6 @@
             </div>
         @endif
 
-        {{-- Thống kê tổng quan --}}
         <div class="row mt-4">
             <div class="col-md-12">
                 <div class="card">

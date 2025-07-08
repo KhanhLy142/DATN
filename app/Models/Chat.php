@@ -3,14 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Chat extends Model
 {
     protected $fillable = [
-        'user_id',
-        'chat_status',
+        'customer_id',
+        'chat_status'
     ];
 
     protected $casts = [
@@ -18,30 +16,96 @@ class Chat extends Model
         'updated_at' => 'datetime',
     ];
 
-    // Relationship với User
-    public function user(): BelongsTo
+    const STATUS_ACTIVE = 'active';
+    const STATUS_CLOSED = 'closed';
+
+    public function customer()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Customer::class);
     }
 
-    // Relationship với ChatMessages
-    public function messages(): HasMany
+    public function messages()
     {
-        return $this->hasMany(ChatMessage::class);
+        return $this->hasMany(ChatMessage::class, 'chat_id');
     }
 
-    // Lấy tin nhắn cuối cùng
-    public function lastMessage()
+    public function getFirstCustomerMessageAttribute()
     {
-        return $this->hasOne(ChatMessage::class)->latest();
+        return $this->messages()
+            ->where('sender', 'customer')
+            ->oldest()
+            ->first();
     }
 
-    // Scope để lọc chat đang hoạt động
+    public function getLastMessageAttribute()
+    {
+        return $this->messages()->latest()->first();
+    }
+
     public function scopeActive($query)
     {
-        return $query->where('chat_status', 'active');
+        return $query->where('chat_status', self::STATUS_ACTIVE);
+    }
+
+    public function scopeClosed($query)
+    {
+        return $query->where('chat_status', self::STATUS_CLOSED);
+    }
+
+    public function isActive()
+    {
+        return $this->chat_status === self::STATUS_ACTIVE;
+    }
+
+    public function getMessageCount()
+    {
+        return $this->messages()->count();
+    }
+
+    public function getCustomerMessageCount()
+    {
+        return $this->messages()->where('sender', 'customer')->count();
+    }
+
+    public function getChatbotMessageCount()
+    {
+        return $this->messages()->where('sender', 'chatbot')->count();
+    }
+
+    public function analyzeTopicFromMessages()
+    {
+        $customerMessages = $this->messages()
+            ->where('sender', 'customer')
+            ->pluck('message')
+            ->implode(' ');
+
+        $keywords = [
+            'sản phẩm' => ['sản phẩm', 'mỹ phẩm', 'giá', 'chất lượng', 'thành phần'],
+            'đơn hàng' => ['đơn hàng', 'đặt hàng', 'giao hàng', 'thanh toán', 'hoá đơn'],
+            'hỗ trợ' => ['hỗ trợ', 'giúp đỡ', 'hướng dẫn', 'cách sử dụng'],
+            'khiếu nại' => ['khiếu nại', 'phàn nàn', 'không hài lòng', 'lỗi', 'tệ']
+        ];
+
+        foreach ($keywords as $topic => $words) {
+            foreach ($words as $word) {
+                if (stripos($customerMessages, $word) !== false) {
+                    return $topic;
+                }
+            }
+        }
+
+        return 'khác';
+    }
+
+    public function getChatDurationInMinutes()
+    {
+        $firstMessage = $this->messages()->oldest()->first();
+        $lastMessage = $this->messages()->latest()->first();
+
+        if ($firstMessage && $lastMessage) {
+            return $firstMessage->created_at->diffInMinutes($lastMessage->created_at);
+        }
+
+        return 0;
     }
 }
-
-
-

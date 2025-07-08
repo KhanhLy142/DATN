@@ -5,12 +5,12 @@
 @section('content')
     <div class="container py-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3>Chat với {{ $chat->user->name ?? 'N/A' }}</h3>
+            <h3>Chat với {{ $chat->customer->name ?? 'Khách #' . $chat->customer_id }}</h3>
             <div>
                 @if($chat->chat_status === 'active')
                     <button class="btn btn-warning me-2" onclick="closeChat()"><i class="fas fa-times"></i> Đóng</button>
                 @endif
-                <a href="{{ route('chats.index') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Quay lại</a>
+                <a href="{{ route('admin.chats.index') }}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Quay lại</a>
             </div>
         </div>
 

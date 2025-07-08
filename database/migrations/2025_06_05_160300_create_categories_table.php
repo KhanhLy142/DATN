@@ -10,13 +10,12 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Tên danh mục
-            $table->text('description')->nullable(); // Mô tả
-            $table->unsignedBigInteger('parent_id')->nullable(); // Danh mục cha (có thể null)
-            $table->boolean('status')->default(1); // 1 = hiển thị, 0 = ẩn
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->boolean('status')->default(1);
             $table->timestamps();
 
-            // Khóa ngoại tự tham chiếu
             $table->foreign('parent_id')->references('id')->on('categories')->onDelete('cascade');
         });
     }

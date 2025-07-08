@@ -23,19 +23,16 @@ class Review extends Model
         'updated_at' => 'datetime',
     ];
 
-    // Quan hệ với bảng products
     public function product()
     {
         return $this->belongsTo(Product::class);
     }
 
-    // Quan hệ với bảng customers/users
     public function customer()
     {
-        return $this->belongsTo(User::class, 'customer_id');
+        return $this->belongsTo(\App\Models\Customer::class, 'customer_id');
     }
 
-    // Scope để lọc theo rating
     public function scopeByRating($query, $rating)
     {
         if ($rating) {
@@ -44,7 +41,6 @@ class Review extends Model
         return $query;
     }
 
-    // Scope để lọc theo sản phẩm
     public function scopeByProduct($query, $productId)
     {
         if ($productId) {
@@ -53,7 +49,6 @@ class Review extends Model
         return $query;
     }
 
-    // Scope để lọc theo trạng thái
     public function scopeByStatus($query, $status)
     {
         if ($status !== null) {
@@ -62,7 +57,6 @@ class Review extends Model
         return $query;
     }
 
-    // Accessor để hiển thị sao
     public function getStarsAttribute()
     {
         $stars = '';
@@ -72,7 +66,6 @@ class Review extends Model
         return $stars;
     }
 
-    // Accessor để cắt ngắn comment
     public function getShortCommentAttribute()
     {
         return strlen($this->comment) > 50
@@ -80,7 +73,6 @@ class Review extends Model
             : $this->comment;
     }
 
-    // Accessor để hiển thị trạng thái
     public function getStatusTextAttribute()
     {
         return $this->status ? 'Hiển thị' : 'Ẩn';

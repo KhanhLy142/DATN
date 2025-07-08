@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="container mt-5">
-        <h4 class="fw-bold text-center text-pink fs-2 mb-4">Quản lý thương hiệu</h4>
+        <h4 class="fw-bold text-center text-pink fs-2 mb-4">Danh sách thương hiệu</h4>
 
         @if(session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
@@ -13,7 +13,6 @@
             <div class="alert alert-danger">{{ session('error') }}</div>
         @endif
 
-        <!-- Filter và Search -->
         <div class="row mb-4">
             <div class="col-md-12">
                 <form method="GET" action="{{ route('admin.brands.index') }}" class="row g-3">
@@ -49,7 +48,6 @@
             <a href="{{ route('admin.brands.create') }}" class="btn btn-primary">Thêm mới</a>
         </div>
 
-        <!-- Thêm class brand-table-container và brand-table -->
         <div class="table-responsive brand-table-container">
             <table class="table table-bordered table-hover align-middle brand-table">
                 <thead class="table-light">
@@ -109,7 +107,6 @@
                         </td>
                         <td>{{ $brand->created_at->format('d/m/Y') }}</td>
                         <td>
-                            <!-- Sử dụng button group thay vì inline style -->
                             <div class="d-flex justify-content-center">
                                 <a href="{{ route('admin.brands.show', $brand->id) }}"
                                    class="btn btn-outline-info btn-sm"
@@ -150,7 +147,6 @@
                 </tbody>
             </table>
 
-            {{-- Phân trang --}}
             @include('admin.layouts.pagination', ['paginator' => $brands, 'itemName' => 'thương hiệu'])
         </div>
     </div>

@@ -6,9 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
+
     public function up(): void
     {
         Schema::create('orders', function (Blueprint $table) {
@@ -16,15 +14,14 @@ return new class extends Migration
             $table->string('tracking_number', 20)->nullable();
             $table->unsignedBigInteger('customer_id');
             $table->decimal('total_amount', 10, 2);
-            $table->enum('status', ['pending', 'processing', 'shipped']);
+            $table->enum('status', ['pending', 'processing', 'shipped', 'completed','cancelled'])->default('pending');
+            $table->text('note')->nullable();
             $table->timestamps();
+
             $table->foreign('customer_id')->references('id')->on('customers');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('orders');

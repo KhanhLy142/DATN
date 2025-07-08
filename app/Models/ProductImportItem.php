@@ -12,6 +12,7 @@ class ProductImportItem extends Model
     protected $fillable = [
         'import_id',
         'product_id',
+        'variant_id',
         'quantity',
         'unit_price'
     ];
@@ -20,31 +21,31 @@ class ProductImportItem extends Model
         'unit_price' => 'decimal:2'
     ];
 
-    // Relationship với ProductImport
     public function import()
     {
         return $this->belongsTo(ProductImport::class, 'import_id');
     }
 
-    // Relationship với Product
     public function product()
     {
         return $this->belongsTo(Product::class);
     }
 
-    // Accessor để tính tổng tiền cho item này
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'variant_id');
+    }
+
     public function getTotalPriceAttribute()
     {
         return $this->quantity * $this->unit_price;
     }
 
-    // Accessor để format đơn giá
     public function getFormattedUnitPriceAttribute()
     {
         return number_format($this->unit_price, 0, ',', '.') . ' ₫';
     }
 
-    // Accessor để format tổng tiền
     public function getFormattedTotalPriceAttribute()
     {
         return number_format($this->total_price, 0, ',', '.') . ' ₫';

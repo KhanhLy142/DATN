@@ -15,6 +15,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'user_type',
         'password',
     ];
 
@@ -26,45 +27,133 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'user_type' => 'string',
         ];
     }
 
-    // Relationships
     public function customer()
     {
-        return $this->hasOne(Customer::class);
+        return $this->hasOne(Customer::class, 'user_id');
     }
 
     public function staff()
     {
-        return $this->hasOne(Staff::class);
+        return $this->hasOne(Staff::class, 'user_id');
     }
 
-    // Events - Đồng bộ password khi thay đổi
+    public function isCustomer()
+    {
+        return $this->user_type === 'customer';
+    }
+
+    public function isStaff()
+    {
+        return $this->user_type === 'staff';
+    }
+
+    public function isAdmin()
+    {
+        return $this->isStaff() && $this->staff && $this->staff->role === 'admin';
+    }
+
+    public function hasRole($role)
+    {
+        return $this->isStaff() && $this->staff && $this->staff->role === $role;
+    }
+
+    public function getStaffRole()
+    {
+        if ($this->isStaff() && $this->staff) {
+            return $this->staff->role;
+        }
+        return null;
+    }
+
+    public function getUserRole()
+    {
+        if ($this->isStaff()) {
+            return $this->getStaffRole();
+        }
+
+        if ($this->isCustomer()) {
+            return 'customer';
+        }
+
+        return null;
+    }
+
+    public function canAccessAdmin()
+    {
+        return $this->isStaff();
+    }
+
+    public function canManage($feature)
+    {
+        $role = $this->getStaffRole();
+
+        if ($role === 'admin') {
+            return true;
+        }
+
+        $permissions = [
+            'sales' => [
+                'orders', 'customers', 'payments', 'shippings'
+            ],
+            'warehouse' => [
+                'inventory', 'products', 'suppliers', 'categories', 'brands'
+            ],
+            'cskh' => [
+                'customers', 'reviews', 'chats', 'discounts'
+            ]
+        ];
+
+        return isset($permissions[$role]) && in_array($feature, $permissions[$role]);
+    }
+
+    public function hasPermission($permission)
+    {
+        if (!$this->isStaff()) {
+            return false;
+        }
+
+        $role = $this->getStaffRole();
+
+        if ($role === 'admin') {
+            return true;
+        }
+
+        return checkRolePermission($role, $permission);
+    }
+
+    public function getDisplayNameWithRole()
+    {
+        $role = $this->getUserRole();
+        $roleNames = [
+            'admin' => 'Quản trị viên',
+            'sales' => 'Nhân viên bán hàng',
+            'warehouse' => 'Nhân viên kho',
+            'cskh' => 'Chăm sóc khách hàng',
+            'customer' => 'Khách hàng'
+        ];
+
+        $roleName = $roleNames[$role] ?? 'Người dùng';
+        return "{$this->name} ({$roleName})";
+    }
+
+    public function scopeCustomers($query)
+    {
+        return $query->where('user_type', 'customer');
+    }
+
+    public function scopeStaffs($query)
+    {
+        return $query->where('user_type', 'staff');
+    }
+
     protected static function booted()
     {
-        // Khi User được cập nhật
         static::updated(function ($user) {
-            // Nếu password thay đổi, đồng bộ sang Customer/Staff
-            if ($user->wasChanged('password')) {
-                // Đồng bộ password cho Customer
-                if ($user->customer) {
-                    $user->customer->update([
-                        'password' => $user->password, // Đã được hash tự động
-                    ]);
-                }
-
-                // Đồng bộ password cho Staff
-                if ($user->staff) {
-                    $user->staff->update([
-                        'password' => $user->password, // Đã được hash tự động
-                    ]);
-                }
-            }
-
-            // Đồng bộ name và email
             if ($user->wasChanged(['name', 'email'])) {
                 if ($user->customer) {
                     $user->customer->update([
@@ -81,28 +170,11 @@ class User extends Authenticatable
                 }
             }
         });
-    }
 
-    // Helper methods
-    public function isCustomer()
-    {
-        return $this->customer !== null;
-    }
-
-    public function isStaff()
-    {
-        return $this->staff !== null;
-    }
-
-    public function getUserType()
-    {
-        if ($this->isStaff()) return 'staff';
-        if ($this->isCustomer()) return 'customer';
-        return 'user';
-    }
-
-    public function canAccessAdmin()
-    {
-        return $this->isStaff();
+        static::creating(function ($user) {
+            if (empty($user->user_type)) {
+                $user->user_type = 'customer';
+            }
+        });
     }
 }

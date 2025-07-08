@@ -1,5 +1,4 @@
 <?php
-// CategoryController.php
 
 namespace App\Http\Controllers\Admin;
 
@@ -55,7 +54,7 @@ class CategoryController extends Controller
         $category = Category::findOrFail($id);
         $parentCategories = Category::whereNull('parent_id')
             ->where('status', 1)
-            ->where('id', '!=', $id) // Không cho chọn chính nó làm parent
+            ->where('id', '!=', $id)
             ->get();
 
         return view('admin.categories.edit', compact('category', 'parentCategories'));
@@ -71,7 +70,6 @@ class CategoryController extends Controller
 
         $category = Category::findOrFail($id);
 
-        // Không cho chọn chính nó hoặc con của nó làm parent
         if ($validated['parent_id'] == $id) {
             return back()->withErrors(['parent_id' => 'Không thể chọn chính danh mục này làm danh mục cha']);
         }
@@ -93,15 +91,9 @@ class CategoryController extends Controller
     {
         $category = Category::findOrFail($id);
 
-        // Kiểm tra có danh mục con không
         if ($category->children()->count() > 0) {
             return redirect()->route('admin.categories.index')->with('error', 'Không thể xóa danh mục có danh mục con!');
         }
-
-        // Kiểm tra có sản phẩm không (nếu đã có bảng products)
-        // if ($category->products()->count() > 0) {
-        //     return redirect()->route('admin.categories.index')->with('error', 'Không thể xóa danh mục có sản phẩm!');
-        // }
 
         $category->delete();
 

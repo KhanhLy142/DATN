@@ -6,9 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('staffs', function (Blueprint $table) {
@@ -16,7 +13,6 @@ return new class extends Migration
             $table->unsignedBigInteger('user_id');
             $table->string('name', 255);
             $table->string('email', 255)->unique();
-            $table->string('password', 255);
             $table->string('phone', 255)->nullable();
             $table->enum('role', ['admin', 'sales', 'warehouse', 'cskh'])->default('sales');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
@@ -24,9 +20,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('staffs');

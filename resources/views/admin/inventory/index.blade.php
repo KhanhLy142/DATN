@@ -4,7 +4,6 @@
 
 @section('content')
     <div class="container-fluid py-4">
-        {{-- Hiển thị thông báo --}}
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -36,25 +35,21 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h2 class="fw-bold text-pink">Danh sách tồn kho</h2>
+            </div>
+        </div>
 
         <div class="card shadow-sm rounded-4">
-            <div class="card-header border-0 bg-transparent">
-                <div class="row align-items-center">
-                    <div class="col">
-                        <h4 class="fw-bold text-pink mb-0">
-                            <i class="bi bi-boxes me-2"></i>Quản lý tồn kho
-                        </h4>
-                    </div>
-                    <div class="col-auto">
-                        <a href="{{ route('admin.inventory.create') }}" class="btn btn-pink">
-                            <i class="bi bi-plus-circle me-2"></i>Nhập hàng
-                        </a>
-                    </div>
-                </div>
-            </div>
-
             <div class="card-body">
-                {{-- Bộ lọc nhanh --}}
+                <div class="mb-3">
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="syncInventory()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Đồng bộ tồn kho
+                    </button>
+                    <small class="text-muted ms-2">Click để đồng bộ dữ liệu tồn kho với sản phẩm</small>
+                </div>
+
                 <div class="filter-section mb-4">
                     <form method="GET" action="{{ route('admin.inventory.index') }}" class="row g-3">
                         <div class="col-md-6">
@@ -91,13 +86,13 @@
                     </form>
                 </div>
 
-                {{-- Thống kê nhanh --}}
                 <div class="row mb-4 inventory-stats">
                     <div class="col-md-3">
                         <div class="card bg-success text-white stat-card">
                             <div class="card-body">
                                 <h6 class="card-title">Còn hàng</h6>
-                                <h3 class="mb-0">{{ $inventories->where('quantity', '>', 10)->count() }}</h3>
+                                <h3 class="mb-0">{{ $stats['in_stock'] ?? 0 }}</h3>
+                                <small>Tồn kho > 10</small>
                             </div>
                         </div>
                     </div>
@@ -105,7 +100,8 @@
                         <div class="card bg-warning text-white stat-card">
                             <div class="card-body">
                                 <h6 class="card-title">Sắp hết</h6>
-                                <h3 class="mb-0">{{ $inventories->whereBetween('quantity', [1, 10])->count() }}</h3>
+                                <h3 class="mb-0">{{ $stats['low_stock'] ?? 0 }}</h3>
+                                <small>Tồn kho 1-10</small>
                             </div>
                         </div>
                     </div>
@@ -113,7 +109,8 @@
                         <div class="card bg-danger text-white stat-card">
                             <div class="card-body">
                                 <h6 class="card-title">Hết hàng</h6>
-                                <h3 class="mb-0">{{ $inventories->where('quantity', 0)->count() }}</h3>
+                                <h3 class="mb-0">{{ $stats['out_stock'] ?? 0 }}</h3>
+                                <small>Tồn kho = 0</small>
                             </div>
                         </div>
                     </div>
@@ -121,13 +118,13 @@
                         <div class="card bg-info text-white stat-card">
                             <div class="card-body">
                                 <h6 class="card-title">Tổng sản phẩm</h6>
-                                <h3 class="mb-0">{{ $inventories->count() }}</h3>
+                                <h3 class="mb-0">{{ $stats['total'] ?? 0 }}</h3>
+                                <small>Tất cả sản phẩm</small>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {{-- Bảng tồn kho --}}
                 <div class="table-responsive">
                     <table class="table table-hover table-modern inventory-table">
                         <thead class="table-light">
@@ -142,7 +139,7 @@
                         </thead>
                         <tbody>
                         @forelse($inventories as $index => $inventory)
-                            <tr class="{{ $inventory->quantity == 0 ? 'table-danger' : ($inventory->quantity <= 10 ? 'table-warning' : '') }}">
+                            <tr>
                                 <td class="text-center">{{ $inventories->firstItem() + $index }}</td>
                                 <td>
                                     <div class="fw-semibold">{{ $inventory->product->name }}</div>
@@ -151,12 +148,7 @@
                                     <span class="badge bg-secondary">{{ $inventory->product->sku }}</span>
                                 </td>
                                 <td class="text-center">
-                                    <span class="quantity-display fw-bold cursor-pointer"
-                                          data-id="{{ $inventory->id }}"
-                                          data-quantity="{{ $inventory->quantity }}"
-                                          onclick="editQuantityInline(this)">
-                                        {{ $inventory->quantity }}
-                                    </span>
+                                    <span class="fw-bold">{{ $inventory->quantity }}</span>
                                 </td>
                                 <td class="text-center">
                                     @if($inventory->quantity > 10)
@@ -190,12 +182,10 @@
                     </table>
                 </div>
 
-                {{-- Phân trang --}}
                 @include('admin.layouts.pagination', ['paginator' => $inventories, 'itemName' => 'tồn kho'])
             </div>
         </div>
 
-        {{-- Link nhanh --}}
         <div class="row mt-4">
             <div class="col-md-4">
                 <a href="{{ route('admin.inventory.create') }}" class="card text-decoration-none hover-card">
@@ -227,40 +217,109 @@
         </div>
     </div>
 
-    {{-- Modal chỉnh sửa nhanh số lượng --}}
-    <div class="modal fade" id="quickEditModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Điều chỉnh tồn kho</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="quickEditForm" method="POST">
-                    @csrf
-                    @method('PUT')
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Số lượng mới</label>
-                            <input type="number" name="quantity" id="quickEditQuantity" class="form-control" min="0" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Lý do điều chỉnh</label>
-                            <select name="reason" class="form-select" required>
-                                <option value="">-- Chọn lý do --</option>
-                                <option value="Kiểm kê">Kiểm kê</option>
-                                <option value="Hàng hỏng">Hàng hỏng</option>
-                                <option value="Trả hàng">Trả hàng</option>
-                                <option value="Sửa lỗi">Sửa lỗi nhập liệu</option>
-                                <option value="Khác">Khác</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                        <button type="submit" class="btn btn-pink">Cập nhật</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+    <style>
+        .inventory-table th,
+        .inventory-table td {
+            padding: 6px 10px !important;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        .inventory-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .status-badge {
+            font-size: 11px;
+            padding: 4px 8px;
+            min-width: 60px;
+        }
+
+        .badge {
+            font-size: 11px;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .stat-card {
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+
+@endsection
+
+@section('scripts')
+    <script>
+        async function syncInventory() {
+            if (!confirm('Bạn có chắc muốn đồng bộ dữ liệu tồn kho? Thao tác này có thể mất vài phút.')) {
+                return;
+            }
+
+            const button = event.target;
+            const originalText = button.innerHTML;
+
+            button.innerHTML = '<i class="bi bi-arrow-clockwise spinner-border spinner-border-sm me-2"></i>Đang đồng bộ...';
+            button.disabled = true;
+
+            try {
+                const response = await fetch('/admin/inventory/sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                    alertDiv.innerHTML = `
+                <i class="bi bi-check-circle-fill me-2"></i>
+                ${result.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+                    document.querySelector('.container-fluid').prepend(alertDiv);
+
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    throw new Error(result.message || 'Có lỗi xảy ra');
+                }
+            } catch (error) {
+                console.error('Sync error:', error);
+                alert('Có lỗi xảy ra khi đồng bộ: ' + error.message);
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
+        setInterval(async function() {
+            try {
+                const response = await fetch('/admin/inventory/stats');
+                if (response.ok) {
+                    const stats = await response.json();
+
+                    document.querySelector('.stat-card:nth-child(1) h3').textContent = stats.in_stock || 0;
+                    document.querySelector('.stat-card:nth-child(2) h3').textContent = stats.low_stock || 0;
+                    document.querySelector('.stat-card:nth-child(3) h3').textContent = stats.out_stock || 0;
+                    document.querySelector('.stat-card:nth-child(4) h3').textContent = stats.total || 0;
+                }
+            } catch (error) {
+                console.log('Stats refresh failed:', error);
+            }
+        }, 30000);
+    </script>
 @endsection

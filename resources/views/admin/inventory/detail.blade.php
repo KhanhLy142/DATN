@@ -4,7 +4,6 @@
 
 @section('content')
     <div class="container-fluid py-4">
-        {{-- Hiển thị thông báo --}}
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -44,7 +43,6 @@
             </div>
 
             <div class="card-body">
-                {{-- Thông tin phiếu nhập --}}
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="card bg-light">
@@ -105,7 +103,6 @@
                     </div>
                 </div>
 
-                {{-- Chi tiết sản phẩm --}}
                 <div class="card border">
                     <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
@@ -165,7 +162,6 @@
                     </div>
                 </div>
 
-                {{-- Thống kê phiếu nhập --}}
                 <div class="row mt-4">
                     <div class="col-md-4">
                         <div class="card text-center border-primary">
@@ -200,7 +196,6 @@
             </div>
         </div>
 
-        {{-- Link nhanh --}}
         <div class="row mt-4">
             <div class="col-md-4">
                 <a href="{{ route('admin.inventory.create') }}" class="card text-decoration-none hover-card">

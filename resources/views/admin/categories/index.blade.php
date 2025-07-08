@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="container mt-5">
-        <h4 class="fw-bold text-center text-pink fs-2 mb-4">Quản lý danh mục sản phẩm</h4>
+        <h4 class="fw-bold text-center text-pink fs-2 mb-4">Danh sách danh mục sản phẩm</h4>
 
         @if(session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
@@ -13,7 +13,6 @@
             <div class="alert alert-danger">{{ session('error') }}</div>
         @endif
 
-        <!-- Filter và Search -->
         <div class="row mb-4">
             <div class="col-md-12">
                 <form method="GET" action="{{ route('admin.categories.index') }}" class="row g-3">
@@ -124,7 +123,6 @@
                 </tbody>
             </table>
 
-            {{-- Phân trang --}}
             @include('admin.layouts.pagination', ['paginator' => $categories, 'itemName' => 'danh mục'])
         </div>
     </div>

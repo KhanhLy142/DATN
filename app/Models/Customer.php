@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Hash;
 use App\Models\Order;
 use App\Models\User;
 
@@ -21,7 +22,6 @@ class Customer extends Model
         'updated_at' => 'datetime',
     ];
 
-    // Relationships
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -32,19 +32,16 @@ class Customer extends Model
         return $this->hasMany(Order::class);
     }
 
-    // THÊM: Accessor để lấy password từ User
     public function getPasswordAttribute()
     {
         return $this->user ? $this->user->password : null;
     }
 
-    // THÊM: Method để kiểm tra password
     public function checkPassword($password)
     {
         return $this->user ? Hash::check($password, $this->user->password) : false;
     }
 
-    // THÊM: Method để cập nhật password (qua User)
     public function updatePassword($newPassword)
     {
         if ($this->user) {
@@ -55,7 +52,6 @@ class Customer extends Model
         return false;
     }
 
-    // Accessors
     public function getFullContactAttribute()
     {
         return $this->name . ' - ' . ($this->phone ?? $this->email);
@@ -71,7 +67,6 @@ class Customer extends Model
         return $this->address ? $this->address : 'Chưa có địa chỉ';
     }
 
-    // Scope để tìm kiếm
     public function scopeSearch($query, $search)
     {
         return $query->where(function($q) use ($search) {
@@ -79,6 +74,30 @@ class Customer extends Model
                 ->orWhere('email', 'like', "%{$search}%")
                 ->orWhere('phone', 'like', "%{$search}%")
                 ->orWhere('address', 'like', "%{$search}%");
+        });
+    }
+
+    protected static function booted()
+    {
+        static::creating(function ($customer) {
+            if (!$customer->user_id && $customer->email) {
+                $user = User::create([
+                    'name' => $customer->name,
+                    'email' => $customer->email,
+                    'user_type' => 'customer',
+                    'password' => Hash::make('password123'),
+                ]);
+                $customer->user_id = $user->id;
+            }
+        });
+
+        static::updated(function ($customer) {
+            if ($customer->user && $customer->wasChanged(['name', 'email'])) {
+                $customer->user->update([
+                    'name' => $customer->name,
+                    'email' => $customer->email,
+                ]);
+            }
         });
     }
 }

@@ -5,9 +5,7 @@
 @section('content')
     <div class="container mt-5">
         <div class="row">
-            <!-- Cột trái -->
             <div class="col-md-4">
-                <!-- Thông tin cơ bản -->
                 <div class="card shadow mb-4">
                     <div class="card-header bg-info text-white">
                         <h5 class="mb-0">
@@ -15,7 +13,6 @@
                         </h5>
                     </div>
                     <div class="card-body text-center">
-                        <!-- Logo -->
                         <div class="mb-3">
                             @if($brand->logo)
                                 <img src="{{ asset('storage/' . $brand->logo) }}" alt="{{ $brand->name }}"
@@ -56,7 +53,6 @@
                     </div>
                 </div>
 
-                <!-- Nhà cung cấp -->
                 <div class="card shadow">
                     <div class="card-header bg-primary text-white">
                         <h6 class="mb-0">
@@ -90,9 +86,7 @@
                 </div>
             </div>
 
-            <!-- Cột phải -->
             <div class="col-md-8">
-                <!-- Mô tả thương hiệu -->
                 <div class="card shadow mb-4">
                     <div class="card-header bg-secondary text-white">
                         <h5 class="mb-0">
@@ -103,8 +97,6 @@
                         <p>{{ $brand->description ?? 'Không có mô tả.' }}</p>
                     </div>
                 </div>
-
-                <!-- Sản phẩm của thương hiệu -->
                 <div class="card shadow">
                     <div class="card-header bg-warning text-dark">
                         <h5 class="mb-0">
@@ -133,8 +125,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Nút quay lại -->
         <div class="text-center mt-4">
             <a href="{{ route('admin.brands.index') }}" class="btn btn-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Quay lại danh sách

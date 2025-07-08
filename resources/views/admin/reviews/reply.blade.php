@@ -6,7 +6,6 @@
     <div class="container py-5">
         <h4 class="fw-bold text-center text-pink fs-2 mb-4">Phản hồi đánh giá</h4>
 
-        {{-- Thông tin đánh giá --}}
         <div class="card mb-4">
             <div class="card-header bg-light">
                 <h5 class="mb-0">Thông tin đánh giá</h5>
@@ -36,7 +35,6 @@
                     </div>
                 </div>
 
-                {{-- Hiển thị phản hồi hiện tại nếu có --}}
                 @if($review->reply)
                     <div class="row mt-3">
                         <div class="col-12">
@@ -50,7 +48,6 @@
             </div>
         </div>
 
-        {{-- Form phản hồi --}}
         <div class="card">
             <div class="card-header bg-light">
                 <h5 class="mb-0">
@@ -84,36 +81,32 @@
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <button type="submit" class="btn btn-pink">
-                                <i class="bi bi-send"></i>
-                                {{ $review->reply ? 'Cập nhật phản hồi' : 'Gửi phản hồi' }}
-                            </button>
-                            <a href="{{ route('admin.reviews.index') }}" class="btn btn-secondary ms-2">
-                                <i class="bi bi-arrow-left"></i> Quay lại
-                            </a>
-                        </div>
-
-                        {{-- Các action khác --}}
-                        <div>
-                            {{-- Toggle status --}}
-                            <form action="{{ route('admin.reviews.toggle-status', $review->id) }}"
-                                  method="POST" class="d-inline-block">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="btn btn-outline-warning">
-                                    <i class="bi {{ $review->status ? 'bi-eye-slash' : 'bi-eye' }}"></i>
-                                    {{ $review->status ? 'Ẩn đánh giá' : 'Hiện đánh giá' }}
-                                </button>
-                            </form>
-                        </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-pink">
+                            <i class="bi bi-send"></i>
+                            {{ $review->reply ? 'Cập nhật phản hồi' : 'Gửi phản hồi' }}
+                        </button>
+                        <a href="{{ route('admin.reviews.index') }}" class="btn btn-secondary ms-2">
+                            <i class="bi bi-arrow-left"></i> Quay lại
+                        </a>
                     </div>
+                </form>
+
+                <div class="text-center mt-3">
+                    <form action="{{ route('admin.reviews.toggle-status', $review->id) }}"
+                          method="POST" class="d-inline-block">
+                        @csrf
+                        @method('PATCH')
+                        <button type="submit" class="btn btn-outline-warning">
+                            <i class="bi {{ $review->status ? 'bi-eye-slash' : 'bi-eye' }}"></i>
+                            {{ $review->status ? 'Ẩn đánh giá' : 'Hiện đánh giá' }}
+                        </button>
+                    </form>
+                </div>
                 </form>
             </div>
         </div>
 
-        {{-- Gợi ý phản hồi --}}
         <div class="card mt-4">
             <div class="card-header bg-light">
                 <h6 class="mb-0">💡 Gợi ý phản hồi</h6>
@@ -159,10 +152,8 @@
         </div>
     </div>
 
-    {{-- JavaScript --}}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Đếm ký tự
             const replyTextarea = document.getElementById('reply');
             const charCount = document.getElementById('char-count');
 
@@ -170,7 +161,6 @@
                 charCount.textContent = this.value.length;
             });
 
-            // Gợi ý phản hồi
             const suggestionBtns = document.querySelectorAll('.suggestion-btn');
             suggestionBtns.forEach(btn => {
                 btn.addEventListener('click', function() {

@@ -3,7 +3,7 @@ body {
     margin: 0;
     font-family: 'Poppins', sans-serif;
     background-color: #fef4f8;
-    overflow-x: hidden; /* Ngăn scroll ngang toàn trang */
+    overflow-x: hidden;
 }
 
 .sidebar {
@@ -18,7 +18,7 @@ body {
     flex-direction: column;
     padding: 0;
     overflow-y: auto;
-    z-index: 1000; /* Đảm bảo sidebar luôn ở trên */
+    z-index: 1000;
 }
 
 .sidebar-header {
@@ -90,17 +90,16 @@ body {
     color: #ec407a;
 }
 
-/* Main content - Điều chỉnh để không bị chồng lên sidebar */
 .main-content {
     margin-left: 240px;
     padding: 20px;
-    width: calc(100vw - 240px); /* Sử dụng viewport width */
+    width: calc(100vw - 240px);
     min-height: 100vh;
     box-sizing: border-box;
-    overflow-x: hidden; /* Ngăn scroll ngang */
+    overflow-x: hidden;
 }
 
-/* Container adjustments */
+
 .container,
 .container-fluid {
     max-width: 100%;
@@ -118,7 +117,7 @@ body {
     margin-bottom: 20px;
     width: 100%;
     box-sizing: border-box;
-    overflow: hidden; /* Ngăn nội dung tràn ra ngoài */
+    overflow: hidden;
 }
 
 .card-title {
@@ -133,7 +132,6 @@ body {
     color: #111;
 }
 
-/* Table responsive improvements */
 .table-responsive {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -160,14 +158,14 @@ body {
     text-align: left;
 }
 
-/* Định nghĩa width cho từng cột */
-.table th:nth-child(1), .table td:nth-child(1) { width: 50px; } /* # */
-.table th:nth-child(2), .table td:nth-child(2) { width: 200px; min-width: 180px; } /* Tên */
-.table th:nth-child(3), .table td:nth-child(3) { width: 180px; min-width: 160px; } /* Email */
-.table th:nth-child(4), .table td:nth-child(4) { width: 120px; min-width: 110px; } /* Phone */
-.table th:nth-child(5), .table td:nth-child(5) { width: 200px; min-width: 180px; } /* Address */
-.table th:nth-child(6), .table td:nth-child(6) { width: 100px; min-width: 90px; } /* Status */
-.table th:nth-child(7), .table td:nth-child(7) { width: 120px; min-width: 110px; } /* Actions */
+
+.table th:nth-child(1), .table td:nth-child(1) { width: 50px; }
+.table th:nth-child(2), .table td:nth-child(2) { width: 200px; min-width: 180px; }
+.table th:nth-child(3), .table td:nth-child(3) { width: 180px; min-width: 160px; }
+.table th:nth-child(4), .table td:nth-child(4) { width: 120px; min-width: 110px; }
+.table th:nth-child(5), .table td:nth-child(5) { width: 200px; min-width: 180px; }
+.table th:nth-child(6), .table td:nth-child(6) { width: 100px; min-width: 90px; }
+.table th:nth-child(7), .table td:nth-child(7) { width: 120px; min-width: 110px; }
 
 .table th {
     background-color: #f8f9fa;
@@ -180,7 +178,6 @@ body {
     background-color: #f8f9fa;
 }
 
-/* CSS riêng cho bảng danh mục sản phẩm */
 .category-table {
     table-layout: fixed;
     min-width: 900px;
@@ -258,7 +255,7 @@ body {
     line-height: 1.3;
 }
 
-/* Button improvements */
+
 .btn-pink {
     background-color: #f8b6c1;
     color: white;
@@ -282,7 +279,6 @@ body {
     border-radius: 4px;
 }
 
-/* Form improvements */
 #searchInput {
     border-radius: 10px;
     padding: 8px 12px;
@@ -438,7 +434,6 @@ form .form-control:focus {
         padding: 2px 6px;
     }
 
-    /* Responsive cho category table */
     .category-table {
         min-width: 700px;
     }
@@ -477,7 +472,6 @@ form .form-control:focus {
     opacity: 0.5;
 }
 
-/* Pagination improvements */
 .pagination {
     margin-bottom: 0;
 }
@@ -500,14 +494,12 @@ form .form-control:focus {
     border-color: #ec407a;
 }
 
-
-/* =================== CSS CHO BẢNG THƯƠNG HIỆU - ĐÃ SỬA LỖI =================== */
 .brand-table {
-    min-width: 1500px; /* Tăng width tối thiểu */
+    min-width: 1500px;
     table-layout: fixed;
 }
 
-/* Định nghĩa lại width cho từng cột brand table */
+
 .brand-table th:nth-child(1), .brand-table td:nth-child(1) {
     width: 60px;
     min-width: 60px;
@@ -551,42 +543,40 @@ form .form-control:focus {
     min-width: 100px;
 }
 
-/* SỬA LỖI: Tăng width cho cột thao tác và đảm bảo hiển thị đầy đủ */
 .brand-table th:nth-child(9), .brand-table td:nth-child(9) {
-    width: 180px; /* Tăng từ 140px lên 180px */
+    width: 180px;
     min-width: 180px;
     white-space: nowrap;
     text-align: center;
-    padding: 8px 4px !important; /* Giảm padding để có thêm không gian */
+    padding: 8px 4px !important;
 }
 
-/* Cải thiện button group trong brand table */
+
 .brand-table .d-flex {
     flex-wrap: nowrap !important;
-    gap: 4px; /* Tăng gap từ 3px lên 4px */
+    gap: 4px;
     justify-content: center;
     align-items: center;
     width: 100%;
 }
 
-/* SỬA LỖI: Cải thiện size và hiển thị button */
 .brand-table .btn-sm {
-    padding: 6px 8px !important; /* Tăng từ 4px 6px */
-    font-size: 13px !important; /* Tăng từ 12px */
-    min-width: 34px; /* Tăng từ 30px */
-    height: 34px; /* Tăng từ 30px */
+    padding: 6px 8px !important;
+    font-size: 13px !important;
+    min-width: 34px;
+    height: 34px;
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    border-radius: 5px; /* Tăng từ 4px */
+    border-radius: 5px;
     margin: 0 1px;
     border-width: 1px !important;
     line-height: 1;
 }
 
-/* Đảm bảo icon hiển thị rõ ràng */
+
 .brand-table .btn i {
-    font-size: 14px !important; /* Tăng từ 12px */
+    font-size: 14px !important;
     line-height: 1;
 }
 
@@ -597,7 +587,7 @@ form .form-control:focus {
     white-space: nowrap;
 }
 
-/* Cho phép mô tả xuống dòng */
+
 .brand-table td:nth-child(6) {
     white-space: normal;
     word-wrap: break-word;
@@ -606,7 +596,6 @@ form .form-control:focus {
     line-height: 1.3;
 }
 
-/* Cải thiện supplier badge */
 .brand-table .supplier-badge {
     background-color: #17a2b8 !important;
     color: white;
@@ -620,7 +609,7 @@ form .form-control:focus {
     text-overflow: ellipsis;
 }
 
-/* Cải thiện status badge */
+
 .brand-table .badge {
     white-space: nowrap;
     min-width: 70px;
@@ -628,7 +617,7 @@ form .form-control:focus {
     padding: 4px 8px;
 }
 
-/* Container cho brand table */
+
 .brand-table-container {
     overflow-x: auto;
     width: 100%;
@@ -636,20 +625,19 @@ form .form-control:focus {
     border-radius: 8px;
 }
 
-/* Hover effect */
+
 .brand-table tbody tr:hover {
     background-color: #f8f9fa;
 }
 
-/* Image thumbnail styling */
 .brand-table .img-thumbnail {
     border-radius: 8px;
 }
 
-/* Responsive cho brand table */
+
 @media (max-width: 1200px) {
     .brand-table {
-        min-width: 1300px; /* Giảm xuống nhưng vẫn đủ rộng */
+        min-width: 1300px;
     }
 
     .brand-table th:nth-child(5),
@@ -657,7 +645,6 @@ form .form-control:focus {
         display: none;
     }
 
-    /* Điều chỉnh cột thao tác cho responsive */
     .brand-table th:nth-child(9), .brand-table td:nth-child(9) {
         width: 160px;
         min-width: 160px;
@@ -675,10 +662,9 @@ form .form-control:focus {
     }
 
     .brand-table {
-        min-width: 800px; /* Giảm cho mobile */
+        min-width: 800px;
     }
 
-    /* Button size cho mobile */
     .brand-table .btn-sm {
         padding: 4px 6px !important;
         font-size: 11px !important;
@@ -695,7 +681,6 @@ form .form-control:focus {
         min-width: 200px;
     }
 
-    /* Cột thao tác cho mobile */
     .brand-table th:nth-child(9), .brand-table td:nth-child(9) {
         width: 120px;
         min-width: 120px;
@@ -705,8 +690,6 @@ form .form-control:focus {
         gap: 2px;
     }
 }
-
-/* =================== KẾT THÚC PHẦN SỬA LỖI BRAND TABLE =================== */
 
 .text-pink {
     color: #ec407a !important;
@@ -857,9 +840,6 @@ form .form-control:focus {
     background-color: #dc3545 !important;
     color: white !important;
 }
-
-/* =================== CSS CHO QUẢN LÝ TỒN KHO =================== */
-
 
 .inventory-table {
     min-width: 1200px;
@@ -1151,7 +1131,6 @@ form .form-control:focus {
     box-shadow: 0 0 0 0.1rem rgba(236, 64, 122, 0.25);
 }
 
-/* --- CUSTOM: Hiển thị rõ ràng tên sản phẩm sau khi chọn --- */
 .product-select {
     max-width: 100%;
     white-space: nowrap;
@@ -1238,7 +1217,7 @@ form .form-control:focus {
     color: #adb5bd;
 }
 
-/* Responsive */
+
 @media (max-width: 576px) {
     .pagination .page-link {
         padding: 6px 10px;
@@ -1248,6 +1227,38 @@ form .form-control:focus {
     .pagination-info {
         font-size: 0.8rem;
     }
+}
+
+.variant-selection {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 12px;
+    background-color: #f8f9fa;
+    margin-top: 8px;
+    transition: all 0.3s ease;
+}
+
+.variant-selection.show {
+    border-color: #6f42c1;
+    background-color: #f8f0ff;
+}
+
+.variant-select {
+    border: 2px solid #6f42c1;
+    font-weight: 500;
+}
+
+.variant-select:focus {
+    border-color: #6f42c1;
+    box-shadow: 0 0 0 0.25rem rgba(111, 66, 193, 0.25);
+}
+
+.selected-product-display {
+    padding: 8px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    margin-top: 8px;
 }
 
 

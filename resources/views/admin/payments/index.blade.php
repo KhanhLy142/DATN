@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="container mt-5">
-        <h4 class="fw-bold text-center text-pink fs-2 mb-4">Quản lý thanh toán</h4>
+        <h4 class="fw-bold text-center text-pink fs-2 mb-4">Danh sách thanh toán</h4>
 
         @if(session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
@@ -13,18 +13,18 @@
             <div class="alert alert-danger">{{ session('error') }}</div>
         @endif
 
-        <!-- Filter và Search -->
         <div class="row mb-4">
             <div class="col-md-12">
                 <form method="GET" action="{{ route('admin.payments.index') }}" class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <input type="text" name="search" class="form-control" placeholder="Tìm kiếm ID đơn hàng, mã giao dịch..." value="{{ request('search') }}">
                     </div>
                     <div class="col-md-3">
                         <select name="payment_method" class="form-select">
                             <option value="">Tất cả phương thức</option>
                             <option value="cod" {{ request('payment_method') === 'cod' ? 'selected' : '' }}>COD</option>
-                            <option value="momo" {{ request('payment_method') === 'momo' ? 'selected' : '' }}>MoMo</option>
+                            <option value="vnpay" {{ request('payment_method') === 'vnpay' ? 'selected' : '' }}>VNPay</option>
+                            <option value="bank_transfer" {{ request('payment_method') === 'bank_transfer' ? 'selected' : '' }}>Chuyển khoản</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -33,9 +33,18 @@
                             <option value="pending" {{ request('payment_status') === 'pending' ? 'selected' : '' }}>Đang chờ</option>
                             <option value="completed" {{ request('payment_status') === 'completed' ? 'selected' : '' }}>Hoàn thành</option>
                             <option value="failed" {{ request('payment_status') === 'failed' ? 'selected' : '' }}>Thất bại</option>
+                            <option value="refunded" {{ request('payment_status') === 'refunded' ? 'selected' : '' }}>Đã hoàn tiền</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <select name="need_confirmation" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="1" {{ request('need_confirmation') == '1' ? 'selected' : '' }}>
+                                🔔 Cần xác nhận CK
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                         <button type="submit" class="btn btn-primary">Tìm kiếm</button>
                         <a href="{{ route('admin.payments.index') }}" class="btn btn-outline-secondary">Reset</a>
                     </div>
@@ -43,7 +52,6 @@
             </div>
         </div>
 
-        <!-- Thống kê -->
         <div class="row mb-3">
             <div class="col-md-12 text-end">
                 <div class="d-inline-block me-3">
@@ -85,8 +93,14 @@
                                 @case('cod')
                                     <span class="badge bg-warning text-dark">COD</span>
                                     @break
-                                @case('momo')
-                                    <span class="badge bg-primary">MoMo</span>
+                                @case('vnpay')
+                                    <span class="badge bg-primary">VNPay</span>
+                                    @break
+                                @case('bank_transfer')
+                                    <span class="badge bg-info">Chuyển khoản</span>
+                                    @if($payment->payment_status === 'pending')
+                                        <br><small class="text-warning fw-bold">🔔 Cần xác nhận</small>
+                                    @endif
                                     @break
                                 @default
                                     <span class="badge bg-secondary">{{ ucfirst($payment->payment_method) }}</span>
@@ -103,13 +117,16 @@
                                 @case('failed')
                                     <span class="badge bg-danger">Thất bại</span>
                                     @break
+                                @case('refunded')
+                                    <span class="badge bg-secondary">Đã hoàn tiền</span>
+                                    @break
                                 @default
                                     <span class="badge bg-light text-dark">{{ ucfirst($payment->payment_status) }}</span>
                             @endswitch
                         </td>
                         <td>
-                            @if($payment->momo_transaction_id)
-                                <span class="badge bg-light text-dark">{{ $payment->momo_transaction_id }}</span>
+                            @if($payment->vnpay_transaction_id)
+                                <span class="badge bg-light text-dark">{{ $payment->vnpay_transaction_id }}</span>
                             @else
                                 <span class="text-muted">-</span>
                             @endif
@@ -118,12 +135,13 @@
                         <td>
                             @if($payment->payment_note)
                                 <span title="{{ $payment->payment_note }}">
-                                    {{ Str::limit($payment->payment_note, 30) }}
-                                </span>
+                            {{ Str::limit($payment->payment_note, 30) }}
+                        </span>
                             @else
                                 <span class="text-muted">-</span>
                             @endif
                         </td>
+
                         <td style="text-align: center; vertical-align: middle;">
                             <div class="d-flex justify-content-center gap-2">
                                 <a href="{{ route('admin.payments.show', $payment->id) }}"
@@ -138,30 +156,20 @@
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
                                 @endif
-                                <form action="{{ route('admin.payments.destroy', $payment->id) }}"
-                                      method="POST"
-                                      onsubmit="return confirm('Bạn có chắc muốn xoá giao dịch này không?')"
-                                      style="display: inline;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit"
-                                            class="btn btn-outline-danger btn-sm"
-                                            title="Xóa">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
+
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="text-center text-muted">Không có giao dịch thanh toán nào</td>
+                        <td colspan="9" class="text-center text-muted py-4">
+                            Không có giao dịch thanh toán nào
+                        </td>
                     </tr>
                 @endforelse
                 </tbody>
             </table>
 
-            {{-- Phân trang --}}
             @include('admin.layouts.pagination', ['paginator' => $payments, 'itemName' => 'giao dịch'])
         </div>
     </div>

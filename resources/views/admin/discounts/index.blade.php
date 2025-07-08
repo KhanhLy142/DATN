@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="container mt-5">
-        <h4 class="fw-bold text-center text-pink fs-2 mb-4">Quản lý mã giảm giá</h4>
+        <h4 class="fw-bold text-center text-pink fs-2 mb-4">Danh sách mã giảm giá</h4>
 
         @if(session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
@@ -13,11 +13,10 @@
             <div class="alert alert-danger">{{ session('error') }}</div>
         @endif
 
-        <!-- Filter và Search -->
         <div class="row mb-4">
             <div class="col-md-12">
                 <form method="GET" action="{{ route('admin.discounts.index') }}" class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <input type="text" name="search" id="searchDiscountInput" class="form-control"
                                placeholder="Tìm kiếm mã giảm giá..." value="{{ request('search') }}">
                     </div>
@@ -37,6 +36,14 @@
                         </select>
                     </div>
                     <div class="col-md-2">
+                        <select name="applies_to" class="form-select discount-filter">
+                            <option value="">Tất cả loại áp dụng</option>
+                            <option value="order" {{ request('applies_to') == 'order' ? 'selected' : '' }}>Coupon đơn hàng</option>
+                            <option value="product" {{ request('applies_to') == 'product' ? 'selected' : '' }}>Sale sản phẩm</option>
+                            <option value="shipping" {{ request('applies_to') == 'shipping' ? 'selected' : '' }}>Miễn phí ship</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
                         <select name="date_filter" class="form-select">
                             <option value="">Tất cả thời gian</option>
                             <option value="today" {{ request('date_filter') == 'today' ? 'selected' : '' }}>Hôm nay</option>
@@ -44,7 +51,7 @@
                             <option value="month" {{ request('date_filter') == 'month' ? 'selected' : '' }}>Tháng này</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <button type="submit" class="btn btn-primary">Tìm kiếm</button>
                         <a href="{{ route('admin.discounts.index') }}" class="btn btn-outline-secondary">Reset</a>
                     </div>
@@ -64,8 +71,10 @@
                 <tr>
                     <th>#</th>
                     <th>Mã giảm giá</th>
+                    <th>Áp dụng cho</th>
                     <th>Loại</th>
                     <th>Giá trị</th>
+                    <th>Đơn tối thiểu</th>
                     <th>Thời gian hiệu lực</th>
                     <th class="text-center" style="width: 120px;">Trạng thái</th>
                     <th>Sản phẩm áp dụng</th>
@@ -81,6 +90,23 @@
                             <strong data-discount-code="{{ $discount->code }}" class="text-primary">
                                 {{ $discount->code }}
                             </strong>
+                            @if($discount->description)
+                                <br><small class="text-muted">{{ $discount->description }}</small>
+                            @endif
+                        </td>
+                        <td>
+                            @php
+                                $appliesTo = $discount->applies_to ?? 'order';
+                                $applyConfig = [
+                                    'order' => ['icon' => 'ticket', 'text' => 'Coupon', 'class' => 'bg-primary'],
+                                    'product' => ['icon' => 'tag', 'text' => 'Sale SP', 'class' => 'bg-success'],
+                                    'shipping' => ['icon' => 'truck', 'text' => 'Miễn ship', 'class' => 'bg-info']
+                                ];
+                                $config = $applyConfig[$appliesTo] ?? $applyConfig['order'];
+                            @endphp
+                            <span class="badge {{ $config['class'] }}">
+                                <i class="bi bi-{{ $config['icon'] }}"></i> {{ $config['text'] }}
+                            </span>
                         </td>
                         <td>
                                 <span class="badge {{ $discount->discount_type == 'percent' ? 'bg-success' : 'bg-info' }}">
@@ -92,6 +118,17 @@
                             <strong class="text-{{ $discount->discount_type == 'percent' ? 'success' : 'info' }}">
                                 {{ $discount->display_value }}
                             </strong>
+                        </td>
+                        <td>
+                            @if($discount->min_order_amount > 0)
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-cart-check"></i> {{ number_format($discount->min_order_amount, 0, ',', '.') }}đ
+                                </span>
+                            @else
+                                <span class="text-muted">
+                                    <i class="bi bi-infinity"></i> Không giới hạn
+                                </span>
+                            @endif
                         </td>
                         <td>
                             <small>
@@ -126,9 +163,13 @@
                                 </span>
                         </td>
                         <td>
-                            @if($discount->products->count() > 0)
+                            @if($discount->applies_to === 'product' && $discount->products->count() > 0)
                                 <span class="badge bg-primary">
                                         <i class="bi bi-box"></i> {{ $discount->products->count() }} sản phẩm
+                                    </span>
+                            @elseif($discount->applies_to === 'product')
+                                <span class="text-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> Chưa chọn SP
                                     </span>
                             @else
                                 <span class="text-muted">
@@ -176,13 +217,12 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="text-center text-muted">Không có mã giảm giá nào</td>
+                        <td colspan="11" class="text-center text-muted">Không có mã giảm giá nào</td>
                     </tr>
                 @endforelse
                 </tbody>
             </table>
 
-            {{-- Phân trang --}}
             @include('admin.layouts.pagination', ['paginator' => $discounts, 'itemName' => 'mã giảm giá'])
         </div>
     </div>

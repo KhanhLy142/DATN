@@ -14,7 +14,6 @@
                             @method('PUT')
 
                             <div class="row">
-                                <!-- Tên nhân viên -->
                                 <div class="col-md-6 mb-3">
                                     <label for="name" class="form-label">
                                         Tên nhân viên <span class="text-danger">*</span>
@@ -31,7 +30,6 @@
                                     @enderror
                                 </div>
 
-                                <!-- Email -->
                                 <div class="col-md-6 mb-3">
                                     <label for="email" class="form-label">
                                         Email <span class="text-danger">*</span>
@@ -50,7 +48,6 @@
                             </div>
 
                             <div class="row">
-                                <!-- Mật khẩu mới -->
                                 <div class="col-md-6 mb-3">
                                     <label for="password" class="form-label">
                                         Mật khẩu mới
@@ -73,7 +70,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Xác nhận mật khẩu -->
                                 <div class="col-md-6 mb-3">
                                     <label for="password_confirmation" class="form-label">
                                         Xác nhận mật khẩu mới
@@ -92,7 +88,6 @@
                             </div>
 
                             <div class="row">
-                                <!-- Số điện thoại -->
                                 <div class="col-md-6 mb-3">
                                     <label for="phone" class="form-label">Số điện thoại</label>
                                     <input type="tel"
@@ -106,7 +101,6 @@
                                     @enderror
                                 </div>
 
-                                <!-- Vai trò -->
                                 <div class="col-md-6 mb-3">
                                     <label for="role" class="form-label">
                                         Vai trò <span class="text-danger">*</span>
@@ -129,7 +123,6 @@
                                 </div>
                             </div>
 
-                            <!-- Thông tin bổ sung -->
                             <div class="alert alert-info">
                                 <h6><i class="bi bi-info-circle"></i> Thông tin bổ sung:</h6>
                                 <div class="row">
@@ -147,7 +140,6 @@
                                 </div>
                             </div>
 
-                            <!-- Buttons -->
                             <div class="text-end">
                                 <button class="btn btn-pink" type="submit">Cập nhật</button>
                                 <a href="{{ route('admin.staffs.index') }}" class="btn btn-secondary">Hủy</a>
@@ -159,3 +151,43 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('password');
+            const eyeIcon = document.getElementById('eyeIcon');
+
+            if (togglePassword && passwordInput && eyeIcon) {
+                togglePassword.addEventListener('click', function() {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+
+                    if (type === 'text') {
+                        eyeIcon.className = 'bi bi-eye-slash';
+                    } else {
+                        eyeIcon.className = 'bi bi-eye';
+                    }
+                });
+            }
+
+            const togglePasswordConfirm = document.getElementById('togglePasswordConfirm');
+            const passwordConfirmInput = document.getElementById('password_confirmation');
+            const eyeIconConfirm = document.getElementById('eyeIconConfirm');
+
+            if (togglePasswordConfirm && passwordConfirmInput && eyeIconConfirm) {
+                togglePasswordConfirm.addEventListener('click', function() {
+                    const type = passwordConfirmInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordConfirmInput.setAttribute('type', type);
+
+                    if (type === 'text') {
+                        eyeIconConfirm.className = 'bi bi-eye-slash';
+                    } else {
+                        eyeIconConfirm.className = 'bi bi-eye';
+                    }
+                });
+            }
+        });
+    </script>
+@endpush

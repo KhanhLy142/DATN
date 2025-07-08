@@ -7,9 +7,8 @@
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <h4 class="fw-bold text-center text-pink fs-2 mb-4">Quản lý khách hàng</h4>
+                    <h4 class="fw-bold text-center text-pink fs-2 mb-4">Danh sách khách hàng</h4>
                     <div class="card-body">
-                        {{-- Thông báo --}}
                         @if(session('success'))
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
                                 {{ session('success') }}
@@ -24,7 +23,6 @@
                             </div>
                         @endif
 
-                        <!-- Form tìm kiếm và lọc -->
                         <div class="row mb-4">
                             <div class="col-12">
                                 <form method="GET" action="{{ route('admin.customers.index') }}" class="row g-3">
@@ -49,14 +47,6 @@
                             </div>
                         </div>
 
-                        <!-- Nút thêm mới -->
-                        <div class="mb-3">
-                            <a href="{{ route('admin.customers.create') }}" class="btn btn-primary">
-                                Thêm mới
-                            </a>
-                        </div>
-
-                        <!-- Bảng danh sách khách hàng -->
                         <div class="table-responsive">
                             <table class="table table-striped table-hover">
                                 <thead class="table-light">
@@ -87,27 +77,6 @@
                                                    class="btn btn-sm btn-outline-info" title="Chi tiết">
                                                     <i class="bi bi-eye"></i>
                                                 </a>
-                                                <a href="{{ route('admin.customers.edit', $customer) }}"
-                                                   class="btn btn-sm btn-outline-warning" title="Sửa">
-                                                    <i class="bi bi-pencil"></i>
-                                                </a>
-                                                @if($customer->orders_count == 0)
-                                                    <form action="{{ route('admin.customers.destroy', $customer) }}"
-                                                          method="POST" class="d-inline"
-                                                          onsubmit="return confirm('Bạn có chắc muốn xóa khách hàng này?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
-                                                    </form>
-                                                @else
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary"
-                                                            style="cursor: not-allowed;" title="Không thể xóa khách hàng có đơn hàng"
-                                                            disabled>
-                                                        <i class="bi bi-lock"></i>
-                                                    </button>
-                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -124,7 +93,6 @@
                             </table>
                         </div>
 
-                        <!-- Phân trang -->
                         @include('admin.layouts.pagination', ['paginator' => $customers, 'itemName' => 'khách hàng'])
                     </div>
                 </div>

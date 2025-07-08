@@ -21,13 +21,11 @@ class Supplier extends Model
         'status' => 'boolean',
     ];
 
-    // Relationship
     public function brands()
     {
         return $this->hasMany(Brand::class);
     }
 
-    // Scope
     public function scopeActive($query)
     {
         return $query->where('status', 1);

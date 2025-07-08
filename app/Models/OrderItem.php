@@ -10,6 +10,7 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'variant_id',
         'quantity',
         'price'
     ];
@@ -19,7 +20,6 @@ class OrderItem extends Model
         'quantity' => 'integer',
     ];
 
-    // Relationships
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
@@ -29,8 +29,11 @@ class OrderItem extends Model
     {
         return $this->belongsTo(Product::class);
     }
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class, 'variant_id');
+    }
 
-    // Accessors
     public function getSubtotalAttribute()
     {
         return $this->quantity * $this->price;

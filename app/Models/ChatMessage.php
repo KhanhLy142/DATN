@@ -18,21 +18,46 @@ class ChatMessage extends Model
         'updated_at' => 'datetime',
     ];
 
-    // Relationship với Chat
-    public function chat(): BelongsTo
+    const SENDER_CUSTOMER = 'customer';
+    const SENDER_CHATBOT = 'chatbot';
+
+    public function chat()
     {
-        return $this->belongsTo(Chat::class);
+        return $this->belongsTo(Chat::class, 'chat_id');
     }
 
-    // Scope để lọc tin nhắn từ user
-    public function scopeFromUser($query)
+    public function scopeFromCustomer($query)
     {
-        return $query->where('sender', 'user');
+        return $query->where('sender', self::SENDER_CUSTOMER);
     }
 
-    // Scope để lọc tin nhắn từ chatbot
     public function scopeFromChatbot($query)
     {
-        return $query->where('sender', 'chatbot');
+        return $query->where('sender', self::SENDER_CHATBOT);
+    }
+
+    public function isFromCustomer()
+    {
+        return $this->sender === self::SENDER_CUSTOMER;
+    }
+
+    public function isFromChatbot()
+    {
+        return $this->sender === self::SENDER_CHATBOT;
+    }
+
+    public function getSenderNameAttribute()
+    {
+        return $this->sender === self::SENDER_CUSTOMER ? 'Khách hàng' : 'AI Bot';
+    }
+
+    public function getSenderIconAttribute()
+    {
+        return $this->sender === self::SENDER_CUSTOMER ? '👤' : '🤖';
+    }
+
+    public function scopeFromUser($query)
+    {
+        return $this->scopeFromCustomer($query);
     }
 }

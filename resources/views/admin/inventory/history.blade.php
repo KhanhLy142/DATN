@@ -4,7 +4,6 @@
 
 @section('content')
     <div class="container-fluid py-4">
-        {{-- Hiển thị thông báo --}}
         @if(session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 <i class="bi bi-check-circle-fill me-2"></i>
@@ -41,7 +40,6 @@
             </div>
 
             <div class="card-body">
-                {{-- Thống kê nhanh --}}
                 <div class="row mb-4">
                     <div class="col-md-3">
                         <div class="card bg-primary text-white">
@@ -77,7 +75,6 @@
                     </div>
                 </div>
 
-                {{-- Bảng lịch sử --}}
                 <div class="table-responsive">
                     <table class="table table-hover table-modern">
                         <thead class="table-light">
@@ -141,12 +138,10 @@
                     </table>
                 </div>
 
-                {{-- Phân trang --}}
                 @include('admin.layouts.pagination', ['paginator' => $imports, 'itemName' => 'lịch sử nhập'])
             </div>
         </div>
 
-        {{-- Link nhanh --}}
         <div class="row mt-4">
             <div class="col-md-4">
                 <a href="{{ route('admin.inventory.create') }}" class="card text-decoration-none hover-card">

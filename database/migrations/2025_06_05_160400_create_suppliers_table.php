@@ -10,11 +10,11 @@ return new class extends Migration
     {
         Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Tên nhà cung cấp
-            $table->string('email')->nullable(); // Email liên hệ
-            $table->string('phone')->nullable(); // Số điện thoại
-            $table->text('address')->nullable(); // Địa chỉ
-            $table->boolean('status')->default(1); // 1 = hoạt động, 0 = ngưng
+            $table->string('name');
+            $table->string('email')->nullable();
+            $table->string('phone')->nullable();
+            $table->text('address')->nullable();
+            $table->boolean('status')->default(1);
             $table->timestamps();
         });
     }
