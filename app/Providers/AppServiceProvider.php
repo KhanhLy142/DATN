@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Route;
@@ -16,6 +17,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot()
     {
+        Schema::defaultStringLength(191);
         Route::aliasMiddleware('customer.auth', \App\Http\Middleware\CustomerAuth::class);
         Route::aliasMiddleware('role', \App\Http\Middleware\CheckStaffRole::class);
 
