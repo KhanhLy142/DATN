@@ -14,7 +14,7 @@ return new class extends Migration
             $table->unsignedBigInteger('customer_id');
             $table->enum('chat_status', ['active', 'closed']);
             $table->timestamps();
-            $table->foreign('user_id')->references('id')->on('customers');
+            $table->foreign('customer_id')->references('id')->on('customers');
         });
     }
 
